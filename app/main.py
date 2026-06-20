@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.dependencies import chat_repository
-from app.routers import chat, documents, health, pages, rag
+from app.routers import admin, chat, documents, health, pages, rag
 
 
 logging.basicConfig(
@@ -41,6 +41,7 @@ def create_app() -> FastAPI:
     api.include_router(documents.router)
     api.include_router(rag.router)
     api.include_router(chat.router)
+    api.include_router(admin.router)
 
     @api.on_event("startup")
     def startup_event():

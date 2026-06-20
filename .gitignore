@@ -84,3 +84,5 @@ main_old.py
 scripts/*.log
 scripts/output/
 scripts/outputs/
+
+runtime_config.json

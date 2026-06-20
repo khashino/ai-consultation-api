@@ -7,58 +7,209 @@
 
   <style>
     :root {
-      --bg: #f3f4f6;
+      --bg: #f4f7fb;
+      --bg-soft: #eef2ff;
       --card: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
-      --border: #e5e7eb;
+      --card-soft: #f8fafc;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+
       --primary: #2563eb;
       --primary-dark: #1d4ed8;
+      --primary-soft: #dbeafe;
+
       --danger: #dc2626;
       --danger-dark: #b91c1c;
-      --success-bg: #dcfce7;
-      --success-text: #166534;
-      --warning-bg: #fef3c7;
-      --warning-text: #92400e;
       --danger-bg: #fee2e2;
       --danger-text: #991b1b;
+
+      --success: #16a34a;
+      --success-bg: #dcfce7;
+      --success-text: #166534;
+
+      --warning-bg: #fef3c7;
+      --warning-text: #92400e;
+
       --purple-bg: #ede9fe;
       --purple-text: #5b21b6;
+
       --blue-bg: #e0f2fe;
       --blue-text: #075985;
+
+      --dark: #0f172a;
+      --dark-2: #111827;
+
+      --shadow-sm: 0 4px 14px rgba(15, 23, 42, 0.06);
+      --shadow-md: 0 12px 32px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+      --radius-sm: 12px;
     }
 
     * {
       box-sizing: border-box;
     }
 
+    html,
+    body {
+      height: 100%;
+    }
+
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: var(--bg);
+      font-family: Inter, Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.10), transparent 32%),
+        radial-gradient(circle at top right, rgba(124, 58, 237, 0.10), transparent 28%),
+        var(--bg);
       color: var(--text);
     }
 
-    header {
-      background: #111827;
+    button,
+    input,
+    textarea,
+    select {
+      font-family: inherit;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+    }
+
+    .sidebar {
+      background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
       color: white;
-      padding: 22px 28px;
+      padding: 20px 16px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 8px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      margin-bottom: 16px;
+    }
+
+    .brand-logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.35);
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+
+    .brand-subtitle {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+
+    .nav-group-label {
+      color: #94a3b8;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 18px 10px 8px;
+      font-weight: 800;
+    }
+
+    .nav-button {
+      width: 100%;
+      text-align: left;
+      padding: 12px 12px;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      background: transparent;
+      color: #dbeafe;
+      cursor: pointer;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: 0.15s ease;
+    }
+
+    .nav-button:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.08);
+    }
+
+    .nav-button.active {
+      background: rgba(37, 99, 235, 0.22);
+      border-color: rgba(96, 165, 250, 0.40);
+      color: white;
+    }
+
+    .nav-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.08);
+      font-size: 13px;
+      flex: 0 0 auto;
+    }
+
+    .sidebar-footer {
+      margin-top: 22px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.10);
+      display: grid;
+      gap: 8px;
+    }
+
+    .main-area {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 26px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 16px;
-      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
-    header h1 {
+    .topbar h1 {
       margin: 0;
       font-size: 24px;
+      letter-spacing: -0.03em;
     }
 
-    header p {
-      margin: 6px 0 0;
-      color: #d1d5db;
-      font-size: 14px;
+    .topbar p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
     }
 
     .header-actions {
@@ -68,39 +219,8 @@
       flex-wrap: wrap;
     }
 
-    .layout {
-      display: grid;
-      grid-template-columns: 260px 1fr;
-      min-height: calc(100vh - 82px);
-    }
-
-    aside {
-      background: #ffffff;
-      border-right: 1px solid var(--border);
-      padding: 18px;
-    }
-
-    .nav-button {
-      width: 100%;
-      text-align: left;
-      padding: 12px 14px;
-      border: none;
-      border-radius: 10px;
-      background: transparent;
-      cursor: pointer;
-      color: #374151;
-      font-weight: bold;
-      margin-bottom: 6px;
-    }
-
-    .nav-button:hover,
-    .nav-button.active {
-      background: #eff6ff;
-      color: var(--primary);
-    }
-
     main {
-      padding: 24px;
+      padding: 26px;
       overflow-x: hidden;
     }
 
@@ -110,6 +230,35 @@
 
     .section.active {
       display: block;
+      animation: fadeIn 0.16s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .section-header {
+      margin-bottom: 18px;
+    }
+
+    .section-header h2 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .section-header p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      line-height: 1.5;
     }
 
     .grid {
@@ -125,74 +274,147 @@
       margin-bottom: 20px;
     }
 
+    .grid-dashboard {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 20px;
+    }
+
     .card {
-      background: var(--card);
-      border-radius: 16px;
+      background: rgba(255,255,255,0.92);
+      border-radius: var(--radius);
       padding: 20px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+      box-shadow: var(--shadow-sm);
       border: 1px solid var(--border);
+    }
+
+    .card.elevated {
+      box-shadow: var(--shadow-md);
     }
 
     .card h2,
     .card h3 {
       margin-top: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .card h2 {
+      font-size: 20px;
+    }
+
+    .card h3 {
+      font-size: 16px;
+    }
+
+    .metric-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 128px;
+    }
+
+    .metric-card::after {
+      content: "";
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      right: -42px;
+      top: -42px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.10);
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     .metric {
-      font-size: 28px;
-      font-weight: bold;
+      font-size: 34px;
+      font-weight: 900;
+      margin-top: 10px;
+      letter-spacing: -0.04em;
+    }
+
+    .metric-help {
+      color: var(--muted);
+      font-size: 13px;
       margin-top: 8px;
     }
 
     .muted {
       color: var(--muted);
       font-size: 13px;
+      line-height: 1.5;
     }
 
     label {
       display: block;
       margin-top: 12px;
       margin-bottom: 6px;
-      font-weight: bold;
-      font-size: 14px;
+      font-weight: 800;
+      font-size: 13px;
+      color: #334155;
     }
 
     input,
     textarea,
     select {
       width: 100%;
-      padding: 10px;
-      border-radius: 10px;
-      border: 1px solid #d1d5db;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border-strong);
       font-size: 14px;
       background: white;
+      color: var(--text);
+      outline: none;
+      transition: 0.12s ease;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10);
     }
 
     textarea {
-      min-height: 110px;
+      min-height: 120px;
       resize: vertical;
     }
 
     button {
       border: none;
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 10px 14px;
       cursor: pointer;
-      font-weight: bold;
+      font-weight: 800;
       background: var(--primary);
       color: white;
+      transition: 0.14s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
 
     button:hover {
       background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
     }
 
     button.secondary {
-      background: #374151;
+      background: #334155;
     }
 
     button.secondary:hover {
-      background: #1f2937;
+      background: #1e293b;
     }
 
     button.danger {
@@ -204,13 +426,24 @@
     }
 
     button.light {
-      background: #f3f4f6;
-      color: #111827;
+      background: #ffffff;
+      color: #0f172a;
       border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(15,23,42,0.04);
     }
 
     button.light:hover {
-      background: #e5e7eb;
+      background: #f8fafc;
+    }
+
+    button.ghost {
+      background: transparent;
+      color: #dbeafe;
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    button.ghost:hover {
+      background: rgba(255,255,255,0.08);
     }
 
     .button-row {
@@ -222,21 +455,27 @@
 
     .result,
     pre {
-      background: #f9fafb;
+      background: #f8fafc;
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 14px;
       padding: 14px;
       white-space: pre-wrap;
       overflow-x: auto;
-      font-size: 14px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: #1e293b;
+    }
+
+    .result.compact {
+      min-height: 72px;
     }
 
     .badge {
       display: inline-block;
-      padding: 4px 8px;
+      padding: 5px 9px;
       border-radius: 999px;
       font-size: 12px;
-      font-weight: bold;
+      font-weight: 900;
       margin-right: 6px;
       margin-bottom: 6px;
     }
@@ -266,11 +505,32 @@
       color: var(--blue-text);
     }
 
-    .list-item {
-      background: #f9fafb;
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #f8fafc;
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--success);
+      box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.12);
+    }
+
+    .list-item {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 13px;
       margin-bottom: 10px;
     }
 
@@ -282,8 +542,9 @@
     }
 
     .list-item-title {
-      font-weight: bold;
+      font-weight: 900;
       word-break: break-all;
+      color: #0f172a;
     }
 
     .session-item {
@@ -291,7 +552,7 @@
     }
 
     .session-item:hover {
-      border-color: var(--primary);
+      border-color: #93c5fd;
       background: #eff6ff;
     }
 
@@ -315,9 +576,9 @@
       max-height: 650px;
       overflow-y: auto;
       padding: 14px;
-      background: #f9fafb;
+      background: #f8fafc;
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: 16px;
     }
 
     .message-row {
@@ -335,24 +596,24 @@
 
     .message-bubble {
       max-width: 78%;
-      padding: 10px 12px;
-      border-radius: 14px;
+      padding: 11px 13px;
+      border-radius: 16px;
       font-size: 14px;
-      line-height: 1.45;
+      line-height: 1.5;
       white-space: pre-wrap;
     }
 
     .message-bubble.user {
       background: var(--primary);
       color: white;
-      border-bottom-right-radius: 4px;
+      border-bottom-right-radius: 5px;
     }
 
     .message-bubble.assistant {
       background: white;
       color: var(--text);
       border: 1px solid var(--border);
-      border-bottom-left-radius: 4px;
+      border-bottom-left-radius: 5px;
     }
 
     .message-time {
@@ -364,197 +625,427 @@
     .empty-state {
       text-align: center;
       color: var(--muted);
-      padding: 40px 20px;
-      border: 1px dashed var(--border);
-      border-radius: 14px;
+      padding: 44px 20px;
+      border: 1px dashed var(--border-strong);
+      border-radius: 16px;
       background: #fafafa;
     }
 
-    @media (max-width: 1000px) {
-      .layout {
+    .model-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .model-name {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      margin-top: 4px;
+      color: var(--primary-dark);
+      word-break: break-word;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .quick-action {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    .quick-action:hover {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      transform: translateY(-1px);
+    }
+
+    .quick-action strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #0f172a;
+    }
+
+    .quick-action span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 1120px) {
+      .app-shell {
         grid-template-columns: 1fr;
       }
 
-      aside {
-        border-right: none;
-        border-bottom: 1px solid var(--border);
+      .sidebar {
+        position: relative;
+        height: auto;
+        display: block;
+      }
+
+      .nav-row-mobile {
         display: flex;
         overflow-x: auto;
         gap: 8px;
       }
 
       .nav-button {
-        min-width: 160px;
-        margin-bottom: 0;
+        min-width: 180px;
       }
 
       .grid,
       .grid-3,
+      .grid-dashboard,
       .session-layout {
         grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .topbar {
+        align-items: flex-start;
+        padding: 16px;
+      }
+
+      main {
+        padding: 16px;
+      }
+
+      .header-actions,
+      .button-row {
+        width: 100%;
+      }
+
+      .header-actions button,
+      .button-row button {
+        flex: 1;
+      }
+
+      .quick-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .message-bubble {
+        max-width: 92%;
       }
     }
   </style>
 </head>
 
 <body>
-  <header>
-    <div>
-      <h1>AI RAG Admin Console</h1>
-      <p>FastAPI + Ollama + ChromaDB + SQLite Chat Sessions</p>
-    </div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">AI</div>
+        <div>
+          <h1 class="brand-title">RAG Admin</h1>
+          <p class="brand-subtitle">Control panel for local AI</p>
+        </div>
+      </div>
 
-    <div class="header-actions">
-      <button class="light" onclick="openChatApp()">Open Chat App</button>
-  <button class="light" onclick="openChatDemo()">Open Widget Demo</button>
-  <button class="light" onclick="loadDashboard()">Refresh</button>
-  <button class="light" onclick="signOut()">Sign Out</button>
-    </div>
-  </header>
+      <div class="nav-group-label">Workspace</div>
 
-  <div class="layout">
-    <aside>
-      <button class="nav-button active" onclick="showSection('dashboard', this)">Dashboard</button>
-      <button class="nav-button" onclick="showSection('documents', this)">Documents</button>
-      <button class="nav-button" onclick="showSection('ask', this)">Ask / Search</button>
-      <button class="nav-button" onclick="showSection('sessions', this)">Chat Sessions</button>
-      <button class="nav-button" onclick="showSection('recent', this)">Recent Messages</button>
+      <div class="nav-row-mobile">
+        <button class="nav-button active" onclick="showSection('dashboard', this)">
+          <span class="nav-icon">⌁</span>
+          Dashboard
+        </button>
+
+        <button class="nav-button" onclick="showSection('documents', this)">
+          <span class="nav-icon">▣</span>
+          Documents
+        </button>
+
+        <button class="nav-button" onclick="showSection('ask', this)">
+          <span class="nav-icon">?</span>
+          Ask / Search
+        </button>
+
+        <button class="nav-button" onclick="showSection('sessions', this)">
+          <span class="nav-icon">☰</span>
+          Chat Sessions
+        </button>
+
+        <button class="nav-button" onclick="showSection('recent', this)">
+          <span class="nav-icon">◷</span>
+          Recent Messages
+        </button>
+      </div>
+
+      <div class="nav-group-label">Shortcuts</div>
+
+      <div class="sidebar-footer">
+        <button class="ghost" onclick="openChatApp()">Open Chat App</button>
+        <button class="ghost" onclick="openChatDemo()">Open Widget Demo</button>
+        <button class="ghost" onclick="loadDashboard()">Refresh All</button>
+        <button class="danger" onclick="signOut()">Sign Out</button>
+      </div>
     </aside>
 
-    <main>
-      <section id="dashboard" class="section active">
-        <div class="grid-3">
-          <div class="card">
-            <div class="muted">Documents</div>
-            <div id="metricDocuments" class="metric">-</div>
-          </div>
-
-          <div class="card">
-            <div class="muted">Chat Sessions</div>
-            <div id="metricSessions" class="metric">-</div>
-          </div>
-
-          <div class="card">
-            <div class="muted">Recent Messages Loaded</div>
-            <div id="metricMessages" class="metric">-</div>
-          </div>
+    <div class="main-area">
+      <header class="topbar">
+        <div>
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="pageSubtitle">Monitor your local RAG platform, model, documents, and chat memory.</p>
         </div>
 
-        <div class="card">
-          <h2>System Info</h2>
-          <div id="systemInfo" class="result">Loading...</div>
+        <div class="header-actions">
+          <span class="status-pill">
+            <span class="status-dot"></span>
+            Local Admin
+          </span>
+
+          <button class="light" onclick="openChatApp()">Chat App</button>
+          <button class="light" onclick="openChatDemo()">Widget Demo</button>
+          <button class="light" onclick="loadDashboard()">Refresh</button>
+          <button class="light" onclick="signOut()">Sign Out</button>
         </div>
-      </section>
+      </header>
 
-      <section id="documents" class="section">
-        <div class="grid">
-          <div class="card">
-            <h2>Upload Document</h2>
-            <p class="muted">Upload a UTF-8 `.txt` file. It will be saved, chunked, embedded, and stored in ChromaDB.</p>
+      <main>
+        <section id="dashboard" class="section active">
+          <div class="section-header">
+            <h2>System Overview</h2>
+            <p>Live status of your FastAPI RAG backend, Ollama model, ChromaDB documents, and SQLite chat memory.</p>
+          </div>
 
-            <label>Select .txt file</label>
-            <input id="fileInput" type="file" accept=".txt" />
-
-            <div class="button-row">
-              <button onclick="uploadDocument()">Upload and Ingest</button>
-              <button class="secondary" onclick="loadDocuments()">Refresh Documents</button>
+          <div class="grid-3">
+            <div class="card metric-card">
+              <div class="metric-label">Documents</div>
+              <div id="metricDocuments" class="metric">-</div>
+              <div class="metric-help">Uploaded files in vector store</div>
             </div>
 
-            <div id="uploadResult" class="result">Upload result will appear here...</div>
+            <div class="card metric-card">
+              <div class="metric-label">Chat Sessions</div>
+              <div id="metricSessions" class="metric">-</div>
+              <div class="metric-help">Historical SQLite sessions</div>
+            </div>
+
+            <div class="card metric-card">
+              <div class="metric-label">Recent Messages</div>
+              <div id="metricMessages" class="metric">-</div>
+              <div class="metric-help">Latest loaded messages</div>
+            </div>
           </div>
 
-          <div class="card">
+          <div class="grid-dashboard">
+            <div class="card elevated">
+              <h2>System Info</h2>
+              <p class="muted">Backend configuration currently exposed by the health endpoint.</p>
+              <div id="systemInfo" class="result">Loading...</div>
+            </div>
+
+            <div class="card elevated">
+              <div class="model-card-header">
+                <div>
+                  <h2>Ollama Model</h2>
+                  <p class="muted">Switch the active local model used by RAG and chat responses.</p>
+                  <div id="currentModelLabel" class="model-name">Loading...</div>
+                </div>
+              </div>
+
+              <label>Available Ollama Models</label>
+              <select id="ollamaModelSelect"></select>
+
+              <div class="button-row">
+                <button onclick="changeOllamaModel()">Change Model</button>
+                <button class="secondary" onclick="loadOllamaModels()">Refresh Models</button>
+              </div>
+
+              <div id="ollamaModelResult" class="result compact">Loading models...</div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top: 20px;">
+            <h2>Quick Actions</h2>
+
+            <div class="quick-actions">
+              <div class="quick-action" onclick="showSectionById('documents')">
+                <strong>Upload knowledge</strong>
+                <span>Add a `.txt` document, chunk it, embed it, and store it in ChromaDB.</span>
+              </div>
+
+              <div class="quick-action" onclick="showSectionById('ask')">
+                <strong>Test RAG</strong>
+                <span>Ask a question, inspect the answer, and debug retrieved context.</span>
+              </div>
+
+              <div class="quick-action" onclick="openChatApp()">
+                <strong>Open full chat</strong>
+                <span>Use the ChatGPT-style chat page with historical sessions.</span>
+              </div>
+
+              <div class="quick-action" onclick="showSectionById('sessions')">
+                <strong>Review memory</strong>
+                <span>Inspect saved user and assistant messages from SQLite.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="documents" class="section">
+          <div class="section-header">
             <h2>Documents</h2>
-            <div id="documentsResult">Loading...</div>
+            <p>Manage the local knowledge base used for retrieval. Uploaded `.txt` files are chunked, embedded, and stored in ChromaDB.</p>
           </div>
-        </div>
-      </section>
 
-      <section id="ask" class="section">
-        <div class="grid">
-          <div class="card">
-            <h2>Ask RAG API</h2>
+          <div class="grid">
+            <div class="card elevated">
+              <h2>Upload Document</h2>
+              <p class="muted">Upload a UTF-8 `.txt` file. It will be saved, chunked, embedded, and stored in ChromaDB.</p>
 
-            <label>Question</label>
-            <textarea id="question">What should I check for a Germany work visa?</textarea>
+              <label>Select .txt file</label>
+              <input id="fileInput" type="file" accept=".txt" />
 
-            <label>Topic</label>
-            <input id="topic" value="immigration" />
+              <div class="button-row">
+                <button onclick="uploadDocument()">Upload and Ingest</button>
+                <button class="secondary" onclick="loadDocuments()">Refresh Documents</button>
+              </div>
 
-            <label>User Country</label>
-            <input id="userCountry" value="Iran" />
-
-            <label>Target Country</label>
-            <input id="targetCountry" value="Germany" />
-
-            <div class="button-row">
-              <button onclick="askQuestion()">Ask</button>
-              <button class="secondary" onclick="debugQuestion()">Debug</button>
+              <div id="uploadResult" class="result">Upload result will appear here...</div>
             </div>
 
-            <div id="answerResult" class="result">Answer will appear here...</div>
+            <div class="card elevated">
+              <h2>Document Index</h2>
+              <p class="muted">Files currently represented in the vector database.</p>
+              <div id="documentsResult">Loading...</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="ask" class="section">
+          <div class="section-header">
+            <h2>Ask / Search</h2>
+            <p>Test answer generation, raw retrieval, and debug prompts from the admin console.</p>
           </div>
 
-          <div class="card">
-            <h2>Search Knowledge Base</h2>
-            <p class="muted">Search uses embeddings + ChromaDB only. It does not call the LLM.</p>
+          <div class="grid">
+            <div class="card elevated">
+              <h2>Ask RAG API</h2>
 
-            <label>Search Question</label>
-            <textarea id="searchQuestion">چرا کیفیت embedding برای RAG فارسی مهم است؟</textarea>
+              <label>Question</label>
+              <textarea id="question">What should I check for a Germany work visa?</textarea>
 
-            <label>Topic</label>
-            <input id="searchTopic" value="AI" />
+              <label>Topic</label>
+              <input id="topic" value="immigration" />
 
-            <div class="button-row">
-              <button onclick="searchKnowledge()">Search</button>
+              <label>User Country</label>
+              <input id="userCountry" value="Iran" />
+
+              <label>Target Country</label>
+              <input id="targetCountry" value="Germany" />
+
+              <div class="button-row">
+                <button onclick="askQuestion()">Ask</button>
+                <button class="secondary" onclick="debugQuestion()">Debug</button>
+              </div>
+
+              <div id="answerResult" class="result">Answer will appear here...</div>
             </div>
 
-            <div id="searchResult" class="result">Search results will appear here...</div>
-          </div>
-        </div>
-      </section>
+            <div class="card elevated">
+              <h2>Search Knowledge Base</h2>
+              <p class="muted">Search uses embeddings + ChromaDB only. It does not call the LLM.</p>
 
-      <section id="sessions" class="section">
-        <div class="session-layout">
-          <div class="card">
+              <label>Search Question</label>
+              <textarea id="searchQuestion">چرا کیفیت embedding برای RAG فارسی مهم است؟</textarea>
+
+              <label>Topic</label>
+              <input id="searchTopic" value="AI" />
+
+              <div class="button-row">
+                <button onclick="searchKnowledge()">Search</button>
+              </div>
+
+              <div id="searchResult" class="result">Search results will appear here...</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="sessions" class="section">
+          <div class="section-header">
             <h2>Chat Sessions</h2>
-            <p class="muted">Click a session to view full conversation history.</p>
+            <p>Browse all saved sessions from SQLite, inspect history, and delete sessions when needed.</p>
+          </div>
 
+          <div class="session-layout">
+            <div class="card elevated">
+              <h2>Historical Chats</h2>
+              <p class="muted">Click a session to view the full conversation.</p>
+
+              <div class="button-row">
+                <button onclick="loadSessions()">Refresh Sessions</button>
+                <button class="secondary" onclick="openChatApp()">Open Chat App</button>
+              </div>
+
+              <div id="sessionsResult" class="session-list">Loading...</div>
+            </div>
+
+            <div class="card elevated">
+              <h2>Session History</h2>
+              <div id="selectedSessionActions" class="button-row"></div>
+              <div id="sessionHistory" class="chat-history">
+                <div class="empty-state">Select a session to view messages.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="recent" class="section">
+          <div class="section-header">
+            <h2>Recent Messages</h2>
+            <p>Latest messages across all chat sessions.</p>
+          </div>
+
+          <div class="card elevated">
             <div class="button-row">
-              <button onclick="loadSessions()">Refresh Sessions</button>
+              <button onclick="loadRecentMessages()">Refresh Recent Messages</button>
             </div>
 
-            <div id="sessionsResult" class="session-list">Loading...</div>
+            <div id="recentMessagesResult" class="result">Loading...</div>
           </div>
-
-          <div class="card">
-            <h2>Session History</h2>
-            <div id="selectedSessionActions" class="button-row"></div>
-            <div id="sessionHistory" class="chat-history">
-              <div class="empty-state">Select a session to view messages.</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="recent" class="section">
-        <div class="card">
-          <h2>Recent Messages</h2>
-          <p class="muted">Latest messages across all sessions.</p>
-
-          <div class="button-row">
-            <button onclick="loadRecentMessages()">Refresh Recent Messages</button>
-          </div>
-
-          <div id="recentMessagesResult" class="result">Loading...</div>
-        </div>
-      </section>
-    </main>
+        </section>
+      </main>
+    </div>
   </div>
 
   <script>
     const API_BASE = "";
     let selectedSessionId = null;
+
+    const sectionMeta = {
+      dashboard: {
+        title: "Dashboard",
+        subtitle: "Monitor your local RAG platform, model, documents, and chat memory."
+      },
+      documents: {
+        title: "Documents",
+        subtitle: "Upload, index, list, and delete local knowledge files."
+      },
+      ask: {
+        title: "Ask / Search",
+        subtitle: "Test the RAG answer endpoint, vector retrieval, and debug output."
+      },
+      sessions: {
+        title: "Chat Sessions",
+        subtitle: "Inspect historical chats saved in SQLite memory."
+      },
+      recent: {
+        title: "Recent Messages",
+        subtitle: "Review the latest messages across all sessions."
+      }
+    };
 
     async function signOut() {
       try {
@@ -568,26 +1059,49 @@
 
       window.location.href = "/login";
     }
-    function openChatApp() {
-      window.location.href = "/chat-app";
-    }
+
     function showSection(sectionId, button) {
+      activateSection(sectionId);
+
+      document.querySelectorAll(".nav-button").forEach(navButton => {
+        navButton.classList.remove("active");
+      });
+
+      if (button) {
+        button.classList.add("active");
+      }
+
+      loadSectionData(sectionId);
+    }
+
+    function showSectionById(sectionId) {
+      const button = Array.from(document.querySelectorAll(".nav-button"))
+        .find(item => item.getAttribute("onclick")?.includes(`'${sectionId}'`));
+
+      showSection(sectionId, button || null);
+    }
+
+    function activateSection(sectionId) {
       document.querySelectorAll(".section").forEach(section => {
         section.classList.remove("active");
       });
 
       document.getElementById(sectionId).classList.add("active");
 
-      document.querySelectorAll(".nav-button").forEach(navButton => {
-        navButton.classList.remove("active");
-      });
+      const meta = sectionMeta[sectionId] || sectionMeta.dashboard;
+      document.getElementById("pageTitle").textContent = meta.title;
+      document.getElementById("pageSubtitle").textContent = meta.subtitle;
+    }
 
-      button.classList.add("active");
-
+    function loadSectionData(sectionId) {
       if (sectionId === "documents") loadDocuments();
       if (sectionId === "sessions") loadSessions();
       if (sectionId === "recent") loadRecentMessages();
       if (sectionId === "dashboard") loadDashboard();
+    }
+
+    function openChatApp() {
+      window.location.href = "/chat-app";
     }
 
     function openChatDemo() {
@@ -597,6 +1111,7 @@
     async function loadDashboard() {
       await Promise.all([
         loadSystemInfo(),
+        loadOllamaModels(),
         loadDocuments(true),
         loadSessions(true),
         loadRecentMessages(true)
@@ -614,8 +1129,117 @@
         const data = await response.json();
 
         target.textContent = JSON.stringify(data, null, 2);
+
+        if (data.model) {
+          document.getElementById("currentModelLabel").textContent = data.model;
+        }
       } catch (error) {
         target.textContent = "Error: " + error.message;
+      }
+    }
+
+    async function loadOllamaModels() {
+      const select = document.getElementById("ollamaModelSelect");
+      const resultDiv = document.getElementById("ollamaModelResult");
+      const currentModelLabel = document.getElementById("currentModelLabel");
+
+      if (!select || !resultDiv) {
+        return;
+      }
+
+      resultDiv.textContent = "Loading Ollama models...";
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/models`, {
+          credentials: "same-origin"
+        });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          resultDiv.textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+
+        const models = data.models || [];
+        const currentModel = data.current_model;
+
+        if (currentModelLabel) {
+          currentModelLabel.textContent = currentModel || "Unknown";
+        }
+
+        if (!models.length) {
+          select.innerHTML = "";
+          resultDiv.textContent = "No Ollama models found. Run: ollama pull llama3.2:1b";
+          return;
+        }
+
+        select.innerHTML = models.map(model => `
+          <option value="${escapeHtml(model)}" ${model === currentModel ? "selected" : ""}>
+            ${escapeHtml(model)}
+          </option>
+        `).join("");
+
+        resultDiv.textContent = JSON.stringify({
+          current_model: currentModel,
+          available_models: models
+        }, null, 2);
+
+      } catch (error) {
+        resultDiv.textContent = "Error: " + error.message;
+      }
+    }
+
+    async function changeOllamaModel() {
+      const select = document.getElementById("ollamaModelSelect");
+      const resultDiv = document.getElementById("ollamaModelResult");
+
+      const modelName = select.value;
+
+      if (!modelName) {
+        resultDiv.textContent = "Please select a model first.";
+        return;
+      }
+
+      const confirmed = confirm(`Change active Ollama model to: ${modelName}?`);
+
+      if (!confirmed) {
+        return;
+      }
+
+      resultDiv.textContent = "Changing model...";
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/model`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            model_name: modelName
+          })
+        });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+
+        const data = await response.json();
+
+        resultDiv.textContent = JSON.stringify(data, null, 2);
+
+        await loadSystemInfo();
+        await loadOllamaModels();
+
+      } catch (error) {
+        resultDiv.textContent = "Error: " + error.message;
       }
     }
 
@@ -653,7 +1277,7 @@
             <div class="list-item-row">
               <div>
                 <div class="list-item-title">${escapeHtml(doc.source)}</div>
-                <div class="muted">${doc.chunks} chunks</div>
+                <div class="muted">${doc.chunks} chunks in vector store</div>
               </div>
 
               <button class="danger" onclick="deleteDocument('${escapeJs(doc.source)}')">
@@ -1055,7 +1679,9 @@
     }
 
     function escapeJs(text) {
-      return String(text).replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+      return String(text)
+        .replaceAll("\\", "\\\\")
+        .replaceAll("'", "\\'");
     }
 
     loadDashboard();

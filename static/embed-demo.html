@@ -1,19 +1,596 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Embed Demo Page</title>
+  <meta charset="UTF-8" />
+  <title>AI RAG Chatbot Widget Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-soft: #dbeafe;
+      --success-bg: #dcfce7;
+      --success-text: #166534;
+      --warning-bg: #fef3c7;
+      --warning-text: #92400e;
+      --code-bg: #0f172a;
+      --code-text: #e5e7eb;
+      --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 30%),
+        radial-gradient(circle at top right, rgba(124, 58, 237, 0.10), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 32px 24px 18px;
+    }
+
+    .hero {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .hero-card {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 34px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      background: #16a34a;
+      border-radius: 999px;
+      box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.14);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 58px);
+      letter-spacing: -0.06em;
+      line-height: 1.02;
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.7;
+      margin: 18px 0 0;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+
+    button,
+    .button-link {
+      border: none;
+      border-radius: 14px;
+      padding: 12px 16px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 14px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: 0.15s ease;
+    }
+
+    button.primary,
+    .button-link.primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    button.primary:hover,
+    .button-link.primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    button.light,
+    .button-link.light {
+      background: white;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    button.light:hover,
+    .button-link.light:hover {
+      background: #f8fafc;
+      transform: translateY(-1px);
+    }
+
+    .preview-card {
+      background: #0f172a;
+      color: white;
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+      min-height: 360px;
+    }
+
+    .preview-card::before {
+      content: "";
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      right: -60px;
+      top: -60px;
+      background: rgba(37, 99, 235, 0.35);
+      border-radius: 999px;
+      filter: blur(4px);
+    }
+
+    .preview-browser {
+      position: relative;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 20px;
+      padding: 16px;
+    }
+
+    .browser-dots {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .browser-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.38);
+    }
+
+    .fake-page-line {
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.14);
+      margin-bottom: 10px;
+    }
+
+    .fake-page-line.short {
+      width: 64%;
+    }
+
+    .fake-widget-preview {
+      margin-top: 30px;
+      margin-left: auto;
+      width: 230px;
+      background: white;
+      color: var(--text);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 20px 45px rgba(0,0,0,0.26);
+    }
+
+    .fake-widget-header {
+      padding: 12px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      color: white;
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .fake-widget-body {
+      padding: 12px;
+      background: #f8fafc;
+    }
+
+    .bubble {
+      padding: 9px 10px;
+      border-radius: 13px;
+      font-size: 12px;
+      line-height: 1.45;
+      margin-bottom: 8px;
+    }
+
+    .bubble.bot {
+      background: white;
+      border: 1px solid var(--border);
+    }
+
+    .bubble.user {
+      background: var(--primary);
+      color: white;
+      margin-left: 34px;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 14px 24px 70px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 22px;
+      box-shadow: 0 8px 24px rgba(15,23,42,0.05);
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      letter-spacing: -0.03em;
+    }
+
+    .card h3 {
+      margin: 18px 0 8px;
+    }
+
+    .card p,
+    .card li {
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .steps {
+      counter-reset: step;
+      list-style: none;
+      padding: 0;
+      margin: 16px 0 0;
+    }
+
+    .steps li {
+      counter-increment: step;
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 10px;
+      margin-bottom: 13px;
+      color: var(--text);
+    }
+
+    .steps li::before {
+      content: counter(step);
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    code {
+      background: #eef2ff;
+      color: #1e3a8a;
+      padding: 2px 5px;
+      border-radius: 6px;
+      font-size: 0.92em;
+    }
+
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 18px;
+      padding: 18px;
+      overflow-x: auto;
+      line-height: 1.6;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .badge {
+      padding: 6px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .badge.success {
+      background: var(--success-bg);
+      color: var(--success-text);
+    }
+
+    .badge.warning {
+      background: var(--warning-bg);
+      color: var(--warning-text);
+    }
+
+    .test-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      margin-top: 14px;
+    }
+
+    .test-question {
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: white;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: 0.14s ease;
+      color: var(--text);
+    }
+
+    .test-question:hover {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      transform: translateY(-1px);
+    }
+
+    footer {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px 30px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .hero,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-card {
+        padding: 26px;
+      }
+
+      .preview-card {
+        min-height: 300px;
+      }
+    }
+  </style>
 </head>
+
 <body>
-  <h1>Example Website</h1>
-  <p>This page embeds the AI Consultation chatbot widget.</p>
+  <header>
+    <section class="hero">
+      <div class="hero-card">
+        <div class="eyebrow">
+          <span class="dot"></span>
+          Live local RAG widget demo
+        </div>
+
+        <h1>Embeddable AI chatbot for your local knowledge base</h1>
+
+        <p>
+          This page demonstrates the public chatbot widget. It connects to your FastAPI RAG backend,
+          uses the <code>POST /chat</code> endpoint, keeps a browser session ID in localStorage,
+          and answers using your uploaded documents and SQLite chat memory.
+        </p>
+
+        <div class="actions">
+          <button class="primary" onclick="openWidgetGuide()">How to test it</button>
+          <a class="button-link light" href="/chat-app">Open Full Chat App</a>
+          <a class="button-link light" href="/app">Admin Console</a>
+        </div>
+
+        <div class="badge-row">
+          <span class="badge success">Public endpoint</span>
+          <span class="badge success">Embeddable</span>
+          <span class="badge warning">Uses local knowledge base</span>
+        </div>
+      </div>
+
+      <div class="preview-card">
+        <div class="preview-browser">
+          <div class="browser-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+
+          <div class="fake-page-line"></div>
+          <div class="fake-page-line short"></div>
+          <div class="fake-page-line"></div>
+
+          <div class="fake-widget-preview">
+            <div class="fake-widget-header">RAG Assistant</div>
+            <div class="fake-widget-body">
+              <div class="bubble bot">Hi! Ask me about your knowledge base.</div>
+              <div class="bubble user">Summarize the uploaded docs.</div>
+              <div class="bubble bot">I’ll answer using retrieved context.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </header>
+
+  <main>
+    <section class="grid">
+      <div class="card" id="how-to-test">
+        <h2>How to test this widget</h2>
+        <p>
+          Click the floating chat button in the bottom-right corner. Ask a question that exists in your uploaded
+          documents. The widget will call your backend and show only the assistant answer.
+        </p>
+
+        <ol class="steps">
+          <li>
+            <div>
+              Make sure the backend is running with <code>uvicorn main:app --reload</code>.
+            </div>
+          </li>
+          <li>
+            <div>
+              Open the admin console at <code>/app</code> and upload at least one knowledge document.
+            </div>
+          </li>
+          <li>
+            <div>
+              Return to this page and click the floating chatbot button.
+            </div>
+          </li>
+          <li>
+            <div>
+              Ask a question related to the uploaded knowledge base.
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h2>Try these test questions</h2>
+        <p>
+          Use questions that match your current knowledge base. These examples are useful for testing retrieval,
+          chat memory, and fallback behavior.
+        </p>
+
+        <div class="test-box">
+          <div class="test-question" onclick="copyQuestion('What should I check for a Germany work visa?')">
+            What should I check for a Germany work visa?
+          </div>
+
+          <div class="test-question" onclick="copyQuestion('Summarize the key points from the knowledge base.')">
+            Summarize the key points from the knowledge base.
+          </div>
+
+          <div class="test-question" onclick="copyQuestion('Explain this in simpler language.')">
+            Explain this in simpler language.
+          </div>
+
+          <div class="test-question" onclick="copyQuestion('چه چیزهایی برای کیفیت RAG فارسی مهم است؟')">
+            چه چیزهایی برای کیفیت RAG فارسی مهم است؟
+          </div>
+        </div>
+
+        <p id="copyStatus"></p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Embed code</h2>
+        <p>
+          To embed this widget into another page, add this configuration and script tag before the closing
+          <code>&lt;/body&gt;</code> tag.
+        </p>
+
+<pre>&lt;script&gt;
+  window.AI_CHATBOT_API_BASE = "http://127.0.0.1:8000";
+  window.AI_CHATBOT_TITLE = "RAG Assistant";
+  window.AI_CHATBOT_SUBTITLE = "Answers from the local knowledge base";
+  window.AI_CHATBOT_TOPIC = "general";
+  window.AI_CHATBOT_USER_COUNTRY = null;
+  window.AI_CHATBOT_TARGET_COUNTRY = null;
+&lt;/script&gt;
+
+&lt;script src="http://127.0.0.1:8000/static/chatbot-widget.js"&gt;&lt;/script&gt;</pre>
+      </div>
+
+      <div class="card">
+        <h2>What this widget does</h2>
+
+        <h3>Frontend behavior</h3>
+        <p>
+          It creates a floating chat button, opens a compact chat window, stores a session ID in
+          <code>localStorage</code>, and sends messages to your backend.
+        </p>
+
+        <h3>Backend behavior</h3>
+        <p>
+          It calls <code>POST /chat</code>. Your backend loads recent chat history from SQLite, retrieves relevant
+          context from ChromaDB, sends a prompt to Ollama, and returns the final answer.
+        </p>
+
+        <h3>Important note</h3>
+        <p>
+          The widget is public by design. Admin features such as document upload, debug, model switching,
+          and chat history management remain protected behind login.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    AI RAG Chatbot Widget Demo · FastAPI + Ollama + ChromaDB + SQLite
+  </footer>
 
   <script>
     window.AI_CHATBOT_API_BASE = "http://127.0.0.1:8000";
     window.AI_CHATBOT_TITLE = "RAG Assistant";
-    window.AI_CHATBOT_TOPIC = "AI Consultation RAG Knowledge Base";
-    window.AI_CHATBOT_USER_COUNTRY = "Iran";
+    window.AI_CHATBOT_SUBTITLE = "Answers from the local knowledge base";
+    window.AI_CHATBOT_TOPIC = "general";
+    window.AI_CHATBOT_USER_COUNTRY = null;
     window.AI_CHATBOT_TARGET_COUNTRY = null;
+
+    function openWidgetGuide() {
+      document.getElementById("how-to-test").scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }
+
+    async function copyQuestion(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        document.getElementById("copyStatus").textContent =
+          "Copied. Open the chatbot button and paste the question.";
+      } catch {
+        document.getElementById("copyStatus").textContent =
+          "Question: " + text;
+      }
+    }
   </script>
 
   <script src="http://127.0.0.1:8000/static/chatbot-widget.js"></script>
