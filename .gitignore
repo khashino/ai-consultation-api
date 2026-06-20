@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.Python
+.python-version
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test / cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# ChromaDB vector database
+chroma_db/
+
+# Uploaded knowledge base documents
+knowledge_base/
+
+# Model / ML cache
+.cache/
+models/
+hf_cache/
+sentence_transformers/
+*.safetensors
+*.bin
+*.pt
+*.onnx
+
+# Old backups
+main_old.py
+
+# Local output files
+outputs/
+tmp/
+temp/
+
+# Node / frontend if added later
+node_modules/
+dist/
+build/

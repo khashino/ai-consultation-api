@@ -2,55 +2,150 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>AI Consultation RAG Platform</title>
+  <title>AI RAG Admin Console</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
+    :root {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --danger: #dc2626;
+      --danger-dark: #b91c1c;
+      --success-bg: #dcfce7;
+      --success-text: #166534;
+      --warning-bg: #fef3c7;
+      --warning-text: #92400e;
+      --danger-bg: #fee2e2;
+      --danger-text: #991b1b;
+      --purple-bg: #ede9fe;
+      --purple-text: #5b21b6;
+      --blue-bg: #e0f2fe;
+      --blue-text: #075985;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
       margin: 0;
-      padding: 0;
-      color: #1f2937;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
     }
 
     header {
       background: #111827;
       color: white;
-      padding: 24px;
-      text-align: center;
+      padding: 22px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
     }
 
     header h1 {
       margin: 0;
-      font-size: 28px;
+      font-size: 24px;
     }
 
     header p {
-      margin: 8px 0 0;
+      margin: 6px 0 0;
       color: #d1d5db;
+      font-size: 14px;
     }
 
-    .container {
-      max-width: 1100px;
-      margin: 24px auto;
-      padding: 0 16px;
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: calc(100vh - 82px);
+    }
+
+    aside {
+      background: #ffffff;
+      border-right: 1px solid var(--border);
+      padding: 18px;
+    }
+
+    .nav-button {
+      width: 100%;
+      text-align: left;
+      padding: 12px 14px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      cursor: pointer;
+      color: #374151;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .nav-button:hover,
+    .nav-button.active {
+      background: #eff6ff;
+      color: var(--primary);
+    }
+
+    main {
+      padding: 24px;
+      overflow-x: hidden;
+    }
+
+    .section {
+      display: none;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 20px;
     }
 
-    .card {
-      background: white;
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
     }
 
-    .card h2 {
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+      border: 1px solid var(--border);
+    }
+
+    .card h2,
+    .card h3 {
       margin-top: 0;
-      font-size: 20px;
-      color: #111827;
+    }
+
+    .metric {
+      font-size: 28px;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
     }
 
     label {
@@ -61,50 +156,77 @@
       font-size: 14px;
     }
 
-    input, textarea, select {
+    input,
+    textarea,
+    select {
       width: 100%;
-      box-sizing: border-box;
       padding: 10px;
-      border-radius: 8px;
+      border-radius: 10px;
       border: 1px solid #d1d5db;
       font-size: 14px;
+      background: white;
     }
 
     textarea {
-      min-height: 100px;
+      min-height: 110px;
       resize: vertical;
     }
 
     button {
-      margin-top: 14px;
-      background: #2563eb;
-      color: white;
       border: none;
+      border-radius: 10px;
       padding: 10px 14px;
-      border-radius: 8px;
       cursor: pointer;
       font-weight: bold;
+      background: var(--primary);
+      color: white;
     }
 
     button:hover {
-      background: #1d4ed8;
+      background: var(--primary-dark);
+    }
+
+    button.secondary {
+      background: #374151;
+    }
+
+    button.secondary:hover {
+      background: #1f2937;
     }
 
     button.danger {
-      background: #dc2626;
+      background: var(--danger);
     }
 
     button.danger:hover {
-      background: #b91c1c;
+      background: var(--danger-dark);
     }
 
-    .result {
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      padding: 14px;
+    button.light {
+      background: #f3f4f6;
+      color: #111827;
+      border: 1px solid var(--border);
+    }
+
+    button.light:hover {
+      background: #e5e7eb;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
       margin-top: 14px;
+    }
+
+    .result,
+    pre {
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
       white-space: pre-wrap;
+      overflow-x: auto;
       font-size: 14px;
     }
 
@@ -115,66 +237,160 @@
       font-size: 12px;
       font-weight: bold;
       margin-right: 6px;
+      margin-bottom: 6px;
     }
 
     .low {
-      background: #fee2e2;
-      color: #991b1b;
+      background: var(--danger-bg);
+      color: var(--danger-text);
     }
 
     .medium {
-      background: #fef3c7;
-      color: #92400e;
+      background: var(--warning-bg);
+      color: var(--warning-text);
     }
 
     .high {
-      background: #dcfce7;
-      color: #166534;
+      background: var(--success-bg);
+      color: var(--success-text);
     }
 
     .review {
-      background: #ede9fe;
-      color: #5b21b6;
+      background: var(--purple-bg);
+      color: var(--purple-text);
     }
 
     .source {
-      background: #e0f2fe;
-      color: #075985;
+      background: var(--blue-bg);
+      color: var(--blue-text);
     }
 
-    .document-item {
+    .list-item {
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .list-item-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      padding: 10px;
-      margin-bottom: 8px;
-      gap: 10px;
+      gap: 12px;
     }
 
-    .document-name {
-      font-size: 14px;
+    .list-item-title {
+      font-weight: bold;
       word-break: break-all;
     }
 
-    .small {
-      font-size: 12px;
-      color: #6b7280;
+    .session-item {
+      cursor: pointer;
     }
 
-    .full-width {
-      grid-column: span 2;
+    .session-item:hover {
+      border-color: var(--primary);
+      background: #eff6ff;
     }
 
-    @media (max-width: 800px) {
-      .container {
+    .session-item.active {
+      border-color: var(--primary);
+      background: #eff6ff;
+    }
+
+    .session-layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 20px;
+    }
+
+    .session-list {
+      max-height: 650px;
+      overflow-y: auto;
+    }
+
+    .chat-history {
+      max-height: 650px;
+      overflow-y: auto;
+      padding: 14px;
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    .message-row {
+      display: flex;
+      margin-bottom: 12px;
+    }
+
+    .message-row.user {
+      justify-content: flex-end;
+    }
+
+    .message-row.assistant {
+      justify-content: flex-start;
+    }
+
+    .message-bubble {
+      max-width: 78%;
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    .message-bubble.user {
+      background: var(--primary);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-bubble.assistant {
+      background: white;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-time {
+      margin-top: 6px;
+      font-size: 11px;
+      opacity: 0.75;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      padding: 40px 20px;
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      background: #fafafa;
+    }
+
+    @media (max-width: 1000px) {
+      .layout {
         grid-template-columns: 1fr;
       }
 
-      .full-width {
-        grid-column: span 1;
+      aside {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        overflow-x: auto;
+        gap: 8px;
+      }
+
+      .nav-button {
+        min-width: 160px;
+        margin-bottom: 0;
+      }
+
+      .grid,
+      .grid-3,
+      .session-layout {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -182,122 +398,246 @@
 
 <body>
   <header>
-    <h1>AI Consultation RAG Platform</h1>
-    <p>FastAPI + Ollama + ChromaDB + Embeddings + Guardrails</p>
+    <div>
+      <h1>AI RAG Admin Console</h1>
+      <p>FastAPI + Ollama + ChromaDB + SQLite Chat Sessions</p>
+    </div>
+
+    <div class="header-actions">
+      <button class="light" onclick="openChatDemo()">Open Chatbot</button>
+      <button class="light" onclick="loadDashboard()">Refresh</button>
+    </div>
   </header>
 
-  <main class="container">
+  <div class="layout">
+    <aside>
+      <button class="nav-button active" onclick="showSection('dashboard', this)">Dashboard</button>
+      <button class="nav-button" onclick="showSection('documents', this)">Documents</button>
+      <button class="nav-button" onclick="showSection('ask', this)">Ask / Search</button>
+      <button class="nav-button" onclick="showSection('sessions', this)">Chat Sessions</button>
+      <button class="nav-button" onclick="showSection('recent', this)">Recent Messages</button>
+    </aside>
 
-    <section class="card">
-      <h2>Ask a Question</h2>
+    <main>
+      <section id="dashboard" class="section active">
+        <div class="grid-3">
+          <div class="card">
+            <div class="muted">Documents</div>
+            <div id="metricDocuments" class="metric">-</div>
+          </div>
 
-      <label>Question</label>
-      <textarea id="question">What should I check for a Germany work visa?</textarea>
+          <div class="card">
+            <div class="muted">Chat Sessions</div>
+            <div id="metricSessions" class="metric">-</div>
+          </div>
 
-      <label>Topic</label>
-      <input id="topic" value="immigration" />
+          <div class="card">
+            <div class="muted">Recent Messages Loaded</div>
+            <div id="metricMessages" class="metric">-</div>
+          </div>
+        </div>
 
-      <label>User Country</label>
-      <input id="userCountry" value="Iran" />
+        <div class="card">
+          <h2>System Info</h2>
+          <div id="systemInfo" class="result">Loading...</div>
+        </div>
+      </section>
 
-      <label>Target Country</label>
-      <input id="targetCountry" value="Germany" />
+      <section id="documents" class="section">
+        <div class="grid">
+          <div class="card">
+            <h2>Upload Document</h2>
+            <p class="muted">Upload a UTF-8 `.txt` file. It will be saved, chunked, embedded, and stored in ChromaDB.</p>
 
-      <button onclick="askQuestion()">Ask</button>
+            <label>Select .txt file</label>
+            <input id="fileInput" type="file" accept=".txt" />
 
-      <div id="answerResult" class="result">Answer will appear here...</div>
-    </section>
+            <div class="button-row">
+              <button onclick="uploadDocument()">Upload and Ingest</button>
+              <button class="secondary" onclick="loadDocuments()">Refresh Documents</button>
+            </div>
 
-    <section class="card">
-      <h2>Upload Document</h2>
+            <div id="uploadResult" class="result">Upload result will appear here...</div>
+          </div>
 
-      <label>Select .txt file</label>
-      <input id="fileInput" type="file" accept=".txt" />
+          <div class="card">
+            <h2>Documents</h2>
+            <div id="documentsResult">Loading...</div>
+          </div>
+        </div>
+      </section>
 
-      <button onclick="uploadDocument()">Upload and Ingest</button>
+      <section id="ask" class="section">
+        <div class="grid">
+          <div class="card">
+            <h2>Ask RAG API</h2>
 
-      <div id="uploadResult" class="result">Upload result will appear here...</div>
-    </section>
+            <label>Question</label>
+            <textarea id="question">What should I check for a Germany work visa?</textarea>
 
-    <section class="card full-width">
-      <h2>Documents</h2>
-      <button onclick="loadDocuments()">Refresh Documents</button>
-      <div id="documentsResult" class="result">Documents will appear here...</div>
-    </section>
+            <label>Topic</label>
+            <input id="topic" value="immigration" />
 
-    <section class="card full-width">
-      <h2>Search Knowledge Base</h2>
+            <label>User Country</label>
+            <input id="userCountry" value="Iran" />
 
-      <label>Search Question</label>
-      <textarea id="searchQuestion">چرا کیفیت embedding برای RAG فارسی مهم است؟</textarea>
+            <label>Target Country</label>
+            <input id="targetCountry" value="Germany" />
 
-      <label>Topic</label>
-      <input id="searchTopic" value="AI" />
+            <div class="button-row">
+              <button onclick="askQuestion()">Ask</button>
+              <button class="secondary" onclick="debugQuestion()">Debug</button>
+            </div>
 
-      <button onclick="searchKnowledge()">Search</button>
+            <div id="answerResult" class="result">Answer will appear here...</div>
+          </div>
 
-      <div id="searchResult" class="result">Search results will appear here...</div>
-    </section>
+          <div class="card">
+            <h2>Search Knowledge Base</h2>
+            <p class="muted">Search uses embeddings + ChromaDB only. It does not call the LLM.</p>
 
-  </main>
+            <label>Search Question</label>
+            <textarea id="searchQuestion">چرا کیفیت embedding برای RAG فارسی مهم است؟</textarea>
+
+            <label>Topic</label>
+            <input id="searchTopic" value="AI" />
+
+            <div class="button-row">
+              <button onclick="searchKnowledge()">Search</button>
+            </div>
+
+            <div id="searchResult" class="result">Search results will appear here...</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="sessions" class="section">
+        <div class="session-layout">
+          <div class="card">
+            <h2>Chat Sessions</h2>
+            <p class="muted">Click a session to view full conversation history.</p>
+
+            <div class="button-row">
+              <button onclick="loadSessions()">Refresh Sessions</button>
+            </div>
+
+            <div id="sessionsResult" class="session-list">Loading...</div>
+          </div>
+
+          <div class="card">
+            <h2>Session History</h2>
+            <div id="selectedSessionActions" class="button-row"></div>
+            <div id="sessionHistory" class="chat-history">
+              <div class="empty-state">Select a session to view messages.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="recent" class="section">
+        <div class="card">
+          <h2>Recent Messages</h2>
+          <p class="muted">Latest messages across all sessions.</p>
+
+          <div class="button-row">
+            <button onclick="loadRecentMessages()">Refresh Recent Messages</button>
+          </div>
+
+          <div id="recentMessagesResult" class="result">Loading...</div>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <script>
     const API_BASE = "";
+    let selectedSessionId = null;
 
-    function getPayload() {
-      return {
-        question: document.getElementById("question").value,
-        topic: document.getElementById("topic").value,
-        user_country: document.getElementById("userCountry").value || null,
-        target_country: document.getElementById("targetCountry").value || null
-      };
+    function showSection(sectionId, button) {
+      document.querySelectorAll(".section").forEach(section => {
+        section.classList.remove("active");
+      });
+
+      document.getElementById(sectionId).classList.add("active");
+
+      document.querySelectorAll(".nav-button").forEach(navButton => {
+        navButton.classList.remove("active");
+      });
+
+      button.classList.add("active");
+
+      if (sectionId === "documents") loadDocuments();
+      if (sectionId === "sessions") loadSessions();
+      if (sectionId === "recent") loadRecentMessages();
+      if (sectionId === "dashboard") loadDashboard();
     }
 
-    async function askQuestion() {
-      const resultDiv = document.getElementById("answerResult");
-      resultDiv.textContent = "Thinking...";
+    function openChatDemo() {
+      window.open("/chat-demo", "_blank");
+    }
+
+    async function loadDashboard() {
+      await Promise.all([
+        loadSystemInfo(),
+        loadDocuments(true),
+        loadSessions(true),
+        loadRecentMessages(true)
+      ]);
+    }
+
+    async function loadSystemInfo() {
+      const target = document.getElementById("systemInfo");
 
       try {
-        const response = await fetch(`${API_BASE}/ask`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(getPayload())
-        });
-
+        const response = await fetch(`${API_BASE}/`);
         const data = await response.json();
 
-        if (!response.ok) {
-          resultDiv.textContent = JSON.stringify(data, null, 2);
+        target.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        target.textContent = "Error: " + error.message;
+      }
+    }
+
+    async function loadDocuments(metricsOnly = false) {
+      const resultDiv = document.getElementById("documentsResult");
+
+      if (!metricsOnly && resultDiv) {
+        resultDiv.textContent = "Loading documents...";
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/documents`);
+        const data = await response.json();
+
+        document.getElementById("metricDocuments").textContent =
+          data.total_documents ?? 0;
+
+        if (metricsOnly) return;
+
+        if (!data.documents || !data.documents.length) {
+          resultDiv.innerHTML = `<div class="empty-state">No documents found.</div>`;
           return;
         }
 
-        const sources = data.sources.map(
-          source => `<span class="badge source">${source}</span>`
-        ).join(" ");
+        resultDiv.innerHTML = data.documents.map(doc => `
+          <div class="list-item">
+            <div class="list-item-row">
+              <div>
+                <div class="list-item-title">${escapeHtml(doc.source)}</div>
+                <div class="muted">${doc.chunks} chunks</div>
+              </div>
 
-        const steps = data.suggested_next_steps.map(
-          step => `• ${step}`
-        ).join("\n");
-
-        resultDiv.innerHTML = `
-          <div>
-            <span class="badge ${data.confidence}">Confidence: ${data.confidence}</span>
-            <span class="badge review">Human Review: ${data.needs_human_review}</span>
+              <button class="danger" onclick="deleteDocument('${escapeJs(doc.source)}')">
+                Delete
+              </button>
+            </div>
           </div>
+        `).join("");
 
-          <h3>Answer</h3>
-          <p>${escapeHtml(data.answer)}</p>
-
-          <h3>Suggested Next Steps</h3>
-          <pre>${escapeHtml(steps)}</pre>
-
-          <h3>Sources</h3>
-          <div>${sources || "No sources"}</div>
-        `;
       } catch (error) {
-        resultDiv.textContent = "Error: " + error.message;
+        if (!metricsOnly && resultDiv) {
+          resultDiv.textContent = "Error: " + error.message;
+        }
       }
     }
 
@@ -325,33 +665,7 @@
         resultDiv.textContent = JSON.stringify(data, null, 2);
 
         await loadDocuments();
-      } catch (error) {
-        resultDiv.textContent = "Error: " + error.message;
-      }
-    }
-
-    async function loadDocuments() {
-      const resultDiv = document.getElementById("documentsResult");
-      resultDiv.textContent = "Loading documents...";
-
-      try {
-        const response = await fetch(`${API_BASE}/documents`);
-        const data = await response.json();
-
-        if (!data.documents || !data.documents.length) {
-          resultDiv.textContent = "No documents found.";
-          return;
-        }
-
-        resultDiv.innerHTML = data.documents.map(doc => `
-          <div class="document-item">
-            <div>
-              <div class="document-name">${escapeHtml(doc.source)}</div>
-              <div class="small">${doc.chunks} chunks</div>
-            </div>
-            <button class="danger" onclick="deleteDocument('${escapeJs(doc.source)}')">Delete</button>
-          </div>
-        `).join("");
+        await loadDashboard();
 
       } catch (error) {
         resultDiv.textContent = "Error: " + error.message;
@@ -371,8 +685,88 @@
         alert(JSON.stringify(data, null, 2));
 
         await loadDocuments();
+        await loadDashboard();
+
       } catch (error) {
         alert("Error: " + error.message);
+      }
+    }
+
+    function getAskPayload() {
+      return {
+        question: document.getElementById("question").value,
+        topic: document.getElementById("topic").value,
+        user_country: document.getElementById("userCountry").value || null,
+        target_country: document.getElementById("targetCountry").value || null
+      };
+    }
+
+    async function askQuestion() {
+      const resultDiv = document.getElementById("answerResult");
+      resultDiv.textContent = "Thinking...";
+
+      try {
+        const response = await fetch(`${API_BASE}/ask`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(getAskPayload())
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          resultDiv.textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+
+        const sources = Array.isArray(data.sources)
+          ? data.sources.map(source => `<span class="badge source">${escapeHtml(source)}</span>`).join(" ")
+          : "";
+
+        const steps = Array.isArray(data.suggested_next_steps)
+          ? data.suggested_next_steps.map(step => `• ${step}`).join("\n")
+          : "";
+
+        resultDiv.innerHTML = `
+          <div>
+            <span class="badge ${escapeHtml(data.confidence)}">Confidence: ${escapeHtml(data.confidence)}</span>
+            <span class="badge review">Human Review: ${escapeHtml(String(data.needs_human_review))}</span>
+          </div>
+
+          <h3>Answer</h3>
+          <p>${escapeHtml(data.answer)}</p>
+
+          <h3>Suggested Next Steps</h3>
+          <pre>${escapeHtml(steps)}</pre>
+
+          <h3>Sources</h3>
+          <div>${sources || "No sources"}</div>
+        `;
+      } catch (error) {
+        resultDiv.textContent = "Error: " + error.message;
+      }
+    }
+
+    async function debugQuestion() {
+      const resultDiv = document.getElementById("answerResult");
+      resultDiv.textContent = "Debugging...";
+
+      try {
+        const response = await fetch(`${API_BASE}/debug`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(getAskPayload())
+        });
+
+        const data = await response.json();
+        resultDiv.textContent = JSON.stringify(data, null, 2);
+
+      } catch (error) {
+        resultDiv.textContent = "Error: " + error.message;
       }
     }
 
@@ -398,18 +792,179 @@
 
         const data = await response.json();
 
+        if (!Array.isArray(data) || !data.length) {
+          resultDiv.innerHTML = `<div class="empty-state">No search results found.</div>`;
+          return;
+        }
+
         resultDiv.innerHTML = data.map((item, index) => `
-          <div style="margin-bottom: 18px;">
+          <div class="list-item">
             <strong>Result ${index + 1}</strong><br/>
             <span class="badge source">${escapeHtml(item.source)}</span>
             <span class="badge medium">Distance: ${Number(item.distance).toFixed(2)}</span>
             <pre>${escapeHtml(item.content)}</pre>
           </div>
-        `).join("") || "No results found.";
+        `).join("");
 
       } catch (error) {
         resultDiv.textContent = "Error: " + error.message;
       }
+    }
+
+    async function loadSessions(metricsOnly = false) {
+      const resultDiv = document.getElementById("sessionsResult");
+
+      if (!metricsOnly && resultDiv) {
+        resultDiv.textContent = "Loading sessions...";
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/chat/sessions`);
+        const data = await response.json();
+
+        document.getElementById("metricSessions").textContent =
+          data.total_sessions ?? 0;
+
+        if (metricsOnly) return;
+
+        if (!data.sessions || !data.sessions.length) {
+          resultDiv.innerHTML = `<div class="empty-state">No chat sessions found.</div>`;
+          document.getElementById("sessionHistory").innerHTML =
+            `<div class="empty-state">Select a session to view messages.</div>`;
+          document.getElementById("selectedSessionActions").innerHTML = "";
+          return;
+        }
+
+        resultDiv.innerHTML = data.sessions.map(session => `
+          <div
+            class="list-item session-item ${session.session_id === selectedSessionId ? "active" : ""}"
+            onclick="loadSessionHistory('${escapeJs(session.session_id)}')"
+          >
+            <div class="list-item-title">${escapeHtml(shortSessionId(session.session_id))}</div>
+            <div class="muted">${session.messages} messages</div>
+            <div class="muted">Last: ${escapeHtml(session.last_message_at || "-")}</div>
+          </div>
+        `).join("");
+
+      } catch (error) {
+        if (!metricsOnly && resultDiv) {
+          resultDiv.textContent = "Error: " + error.message;
+        }
+      }
+    }
+
+    async function loadSessionHistory(sessionId) {
+      selectedSessionId = sessionId;
+
+      const historyDiv = document.getElementById("sessionHistory");
+      const actionsDiv = document.getElementById("selectedSessionActions");
+
+      historyDiv.innerHTML = `<div class="empty-state">Loading session...</div>`;
+
+      actionsDiv.innerHTML = `
+        <button class="danger" onclick="deleteSession('${escapeJs(sessionId)}')">Delete Session</button>
+        <button class="secondary" onclick="loadSessionHistory('${escapeJs(sessionId)}')">Refresh History</button>
+      `;
+
+      try {
+        const response = await fetch(`${API_BASE}/chat/sessions/${encodeURIComponent(sessionId)}`);
+        const data = await response.json();
+
+        await loadSessions();
+
+        if (!data.messages || !data.messages.length) {
+          historyDiv.innerHTML = `<div class="empty-state">No messages in this session.</div>`;
+          return;
+        }
+
+        historyDiv.innerHTML = data.messages.map(message => {
+          const roleClass = message.role === "user" ? "user" : "assistant";
+
+          return `
+            <div class="message-row ${roleClass}">
+              <div class="message-bubble ${roleClass}">
+                ${escapeHtml(message.content)}
+                <div class="message-time">${escapeHtml(message.created_at || "")}</div>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        historyDiv.scrollTop = historyDiv.scrollHeight;
+
+      } catch (error) {
+        historyDiv.textContent = "Error: " + error.message;
+      }
+    }
+
+    async function deleteSession(sessionId) {
+      const confirmed = confirm(`Delete chat session: ${sessionId}?`);
+      if (!confirmed) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/chat/sessions/${encodeURIComponent(sessionId)}`, {
+          method: "DELETE"
+        });
+
+        const data = await response.json();
+        alert(JSON.stringify(data, null, 2));
+
+        selectedSessionId = null;
+        document.getElementById("selectedSessionActions").innerHTML = "";
+        document.getElementById("sessionHistory").innerHTML =
+          `<div class="empty-state">Select a session to view messages.</div>`;
+
+        await loadSessions();
+        await loadDashboard();
+
+      } catch (error) {
+        alert("Error: " + error.message);
+      }
+    }
+
+    async function loadRecentMessages(metricsOnly = false) {
+      const resultDiv = document.getElementById("recentMessagesResult");
+
+      if (!metricsOnly && resultDiv) {
+        resultDiv.textContent = "Loading recent messages...";
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/chat/messages/recent?limit=30`);
+        const data = await response.json();
+
+        document.getElementById("metricMessages").textContent =
+          data.messages ? data.messages.length : 0;
+
+        if (metricsOnly) return;
+
+        if (!data.messages || !data.messages.length) {
+          resultDiv.innerHTML = `<div class="empty-state">No recent messages found.</div>`;
+          return;
+        }
+
+        resultDiv.innerHTML = data.messages.map(message => `
+          <div class="list-item">
+            <div>
+              <span class="badge ${message.role === "user" ? "source" : "review"}">${escapeHtml(message.role)}</span>
+              <span class="muted">${escapeHtml(message.created_at || "")}</span>
+            </div>
+            <div class="muted">Session: ${escapeHtml(shortSessionId(message.session_id))}</div>
+            <pre>${escapeHtml(message.content)}</pre>
+          </div>
+        `).join("");
+
+      } catch (error) {
+        if (!metricsOnly && resultDiv) {
+          resultDiv.textContent = "Error: " + error.message;
+        }
+      }
+    }
+
+    function shortSessionId(sessionId) {
+      if (!sessionId) return "-";
+      if (sessionId.length <= 18) return sessionId;
+      return sessionId.slice(0, 8) + "..." + sessionId.slice(-6);
     }
 
     function escapeHtml(text) {
@@ -423,10 +978,10 @@
     }
 
     function escapeJs(text) {
-      return String(text).replaceAll("'", "\\'");
+      return String(text).replaceAll("\\", "\\\\").replaceAll("'", "\\'");
     }
 
-    loadDocuments();
+    loadDashboard();
   </script>
 </body>
 </html>
