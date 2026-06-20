@@ -8,6 +8,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def get_bool_env(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+
+    if value is None:
+        return default
+
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass
 class Settings:
     ollama_url: str = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
@@ -28,10 +37,17 @@ class Settings:
     chat_db_path: str = os.getenv("CHAT_DB_PATH", "chat_history.db")
     max_chat_messages: int = int(os.getenv("MAX_CHAT_MESSAGES", "8"))
 
-    app_version: str = "1.4.0"
+    app_version: str = "1.5.0"
 
     admin_username: str = os.getenv("ADMIN_USERNAME", "admin")
     admin_password: str = os.getenv("ADMIN_PASSWORD", "admin")
+
+    admin_session_secret: str = os.getenv(
+        "ADMIN_SESSION_SECRET",
+        "dev-only-change-this-secret"
+    )
+    admin_cookie_name: str = os.getenv("ADMIN_COOKIE_NAME", "admin_session")
+    admin_cookie_secure: bool = get_bool_env("ADMIN_COOKIE_SECURE", False)
 
     def ensure_directories(self) -> None:
         Path(self.knowledge_dir).mkdir(parents=True, exist_ok=True)

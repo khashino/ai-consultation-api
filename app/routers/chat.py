@@ -10,11 +10,6 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 @router.post("", response_model=ChatResponse)
 def chat(request: ChatRequest):
-    """
-    Public chatbot endpoint.
-
-    This stays public so the embeddable chatbot widget can use it.
-    """
     return chat_service.chat(request)
 
 

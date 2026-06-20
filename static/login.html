@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Login - AI RAG Console</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --danger-bg: #fee2e2;
+      --danger-text: #991b1b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+      padding: 28px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 26px;
+    }
+
+    p {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    label {
+      display: block;
+      margin-top: 14px;
+      margin-bottom: 6px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-top: 20px;
+      cursor: pointer;
+      font-weight: bold;
+      background: var(--primary);
+      color: white;
+      font-size: 15px;
+    }
+
+    button:hover {
+      background: var(--primary-dark);
+    }
+
+    .error {
+      display: none;
+      margin-top: 14px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      font-size: 14px;
+    }
+
+    .footer-link {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .footer-link a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="login-card">
+    <h1>Admin Login</h1>
+    <p>Sign in to manage documents, inspect chat sessions, and debug RAG responses.</p>
+
+    <form id="loginForm">
+      <label>Username</label>
+      <input id="username" name="username" type="text" autocomplete="username" required />
+
+      <label>Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required />
+
+      <button type="submit">Sign In</button>
+
+      <div id="errorBox" class="error"></div>
+    </form>
+
+    <div class="footer-link">
+      <a href="/chat-demo">Open public chatbot demo</a>
+    </div>
+  </div>
+
+  <script>
+    const loginForm = document.getElementById("loginForm");
+    const errorBox = document.getElementById("errorBox");
+
+    loginForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      errorBox.style.display = "none";
+      errorBox.textContent = "";
+
+      const formData = new FormData();
+      formData.append("username", document.getElementById("username").value);
+      formData.append("password", document.getElementById("password").value);
+
+      try {
+        const response = await fetch("/login", {
+          method: "POST",
+          body: formData,
+          credentials: "same-origin"
+        });
+
+        if (response.redirected) {
+          window.location.href = response.url;
+          return;
+        }
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => null);
+          errorBox.textContent = data?.detail || "Invalid username or password.";
+          errorBox.style.display = "block";
+          return;
+        }
+
+        window.location.href = "/app";
+
+      } catch (error) {
+        errorBox.textContent = "Login failed: " + error.message;
+        errorBox.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>

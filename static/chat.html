@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI RAG Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --sidebar: #111827;
+      --sidebar-light: #1f2937;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --danger: #dc2626;
+      --danger-dark: #b91c1c;
+      --assistant-bg: #ffffff;
+      --user-bg: #2563eb;
+      --user-text: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      height: 100vh;
+    }
+
+    .sidebar {
+      background: var(--sidebar);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .sidebar-header {
+      padding: 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-title {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .sidebar-subtitle {
+      margin: 6px 0 0;
+      color: #d1d5db;
+      font-size: 13px;
+    }
+
+    .sidebar-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      padding: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-weight: bold;
+      background: var(--primary);
+      color: white;
+      font-size: 14px;
+    }
+
+    button:hover {
+      background: var(--primary-dark);
+    }
+
+    button.secondary {
+      background: #374151;
+    }
+
+    button.secondary:hover {
+      background: #4b5563;
+    }
+
+    button.light {
+      background: #f3f4f6;
+      color: #111827;
+      border: 1px solid var(--border);
+    }
+
+    button.light:hover {
+      background: #e5e7eb;
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
+    button.danger:hover {
+      background: var(--danger-dark);
+    }
+
+    .sessions {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .session-item {
+      padding: 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      background: transparent;
+      color: #e5e7eb;
+      margin-bottom: 6px;
+      border: 1px solid transparent;
+    }
+
+    .session-item:hover {
+      background: var(--sidebar-light);
+    }
+
+    .session-item.active {
+      background: var(--sidebar-light);
+      border-color: rgba(255,255,255,0.18);
+    }
+
+    .session-title {
+      font-size: 14px;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .session-meta {
+      color: #9ca3af;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    .sidebar-footer {
+      padding: 14px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      display: grid;
+      gap: 8px;
+    }
+
+    .chat-main {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      height: 100vh;
+      min-width: 0;
+    }
+
+    .chat-header {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 16px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .chat-header h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .chat-header p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chat-body {
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    .empty-state {
+      max-width: 720px;
+      margin: 80px auto 0;
+      text-align: center;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+    }
+
+    .empty-state h2 {
+      margin-top: 0;
+    }
+
+    .empty-state p {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .suggestions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .suggestion {
+      text-align: left;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .suggestion:hover {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    .message {
+      max-width: 900px;
+      margin: 0 auto 18px;
+      display: flex;
+    }
+
+    .message.user {
+      justify-content: flex-end;
+    }
+
+    .message.assistant {
+      justify-content: flex-start;
+    }
+
+    .bubble {
+      max-width: 78%;
+      padding: 13px 15px;
+      border-radius: 16px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 15px;
+    }
+
+    .bubble.user {
+      background: var(--user-bg);
+      color: var(--user-text);
+      border-bottom-right-radius: 5px;
+    }
+
+    .bubble.assistant {
+      background: var(--assistant-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 5px;
+    }
+
+    .message-time {
+      margin-top: 6px;
+      font-size: 11px;
+      opacity: 0.7;
+    }
+
+    .composer-wrap {
+      background: white;
+      border-top: 1px solid var(--border);
+      padding: 16px 22px;
+    }
+
+    .composer {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .composer textarea {
+      width: 100%;
+      min-height: 52px;
+      max-height: 160px;
+      resize: vertical;
+      border-radius: 14px;
+      border: 1px solid #d1d5db;
+      padding: 13px 14px;
+      font-size: 15px;
+      font-family: Arial, sans-serif;
+    }
+
+    .composer button {
+      height: 52px;
+      min-width: 90px;
+    }
+
+    .settings-row {
+      max-width: 900px;
+      margin: 0 auto 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .settings-row input {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 9px 10px;
+      font-size: 13px;
+    }
+
+    .typing {
+      max-width: 900px;
+      margin: 0 auto 18px;
+      color: var(--muted);
+      font-size: 14px;
+      display: none;
+    }
+
+    .typing.active {
+      display: block;
+    }
+
+    .error-box {
+      max-width: 900px;
+      margin: 0 auto 12px;
+      display: none;
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+
+    .error-box.active {
+      display: block;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .bubble {
+        max-width: 92%;
+      }
+
+      .suggestions,
+      .settings-row {
+        grid-template-columns: 1fr;
+      }
+
+      .chat-header {
+        padding: 14px;
+      }
+
+      .chat-body {
+        padding: 16px;
+      }
+
+      .composer-wrap {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="sidebar-title">AI RAG Chat</h1>
+        <p class="sidebar-subtitle">Historical sessions + new chat</p>
+      </div>
+
+      <div class="sidebar-actions">
+        <button onclick="newChat()">+ New Chat</button>
+        <button class="secondary" onclick="loadSessions()">Refresh History</button>
+      </div>
+
+      <div id="sessionsList" class="sessions">
+        Loading sessions...
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="secondary" onclick="goToAdmin()">Admin Console</button>
+        <button class="secondary" onclick="openChatDemo()">Widget Demo</button>
+        <button class="danger" onclick="signOut()">Sign Out</button>
+      </div>
+    </aside>
+
+    <main class="chat-main">
+      <header class="chat-header">
+        <div>
+          <h1 id="chatTitle">New Chat</h1>
+          <p id="chatSubtitle">Ask questions using your local knowledge base and chat memory.</p>
+        </div>
+
+        <div class="header-actions">
+          <button class="light" onclick="newChat()">New Chat</button>
+          <button class="light" onclick="loadSessions()">Refresh</button>
+          <button class="light" onclick="goToAdmin()">Admin</button>
+          <button class="light" onclick="signOut()">Sign Out</button>
+        </div>
+      </header>
+
+      <section id="chatBody" class="chat-body">
+        <div class="empty-state">
+          <h2>Start a new RAG chat</h2>
+          <p>
+            This is a full chat page, separate from the embeddable website chatbot.
+            It uses the same backend chat endpoint, but also lets you browse historical sessions.
+          </p>
+
+          <div class="suggestions">
+            <div class="suggestion" onclick="useSuggestion('What should I check for a Germany work visa?')">
+              What should I check for a Germany work visa?
+            </div>
+            <div class="suggestion" onclick="useSuggestion('Summarize the key points from the knowledge base.')">
+              Summarize the key points from the knowledge base.
+            </div>
+            <div class="suggestion" onclick="useSuggestion('Explain this in simpler language.')">
+              Explain this in simpler language.
+            </div>
+            <div class="suggestion" onclick="useSuggestion('چه چیزهایی برای کیفیت RAG فارسی مهم است؟')">
+              چه چیزهایی برای کیفیت RAG فارسی مهم است؟
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div id="typingIndicator" class="typing">Assistant is thinking...</div>
+      <div id="errorBox" class="error-box"></div>
+
+      <footer class="composer-wrap">
+        <div class="settings-row">
+          <input id="topicInput" placeholder="Topic" value="general" />
+          <input id="userCountryInput" placeholder="User country, optional" />
+          <input id="targetCountryInput" placeholder="Target country, optional" />
+        </div>
+
+        <div class="composer">
+          <textarea
+            id="messageInput"
+            placeholder="Message the RAG assistant..."
+            onkeydown="handleComposerKeydown(event)"
+          ></textarea>
+
+          <button onclick="sendMessage()">Send</button>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const API_BASE = "";
+
+    let currentSessionId = null;
+    let currentMessages = [];
+    let isSending = false;
+
+    function createSessionId() {
+      if (window.crypto && crypto.randomUUID) {
+        return crypto.randomUUID();
+      }
+
+      return "session-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+    }
+
+    function newChat() {
+      currentSessionId = createSessionId();
+      currentMessages = [];
+
+      document.getElementById("chatTitle").textContent = "New Chat";
+      document.getElementById("chatSubtitle").textContent = shortSessionId(currentSessionId);
+      document.getElementById("messageInput").value = "";
+
+      renderMessages();
+      setActiveSessionInSidebar();
+      hideError();
+
+      document.getElementById("messageInput").focus();
+    }
+
+    async function loadSessions() {
+      const sessionsList = document.getElementById("sessionsList");
+      sessionsList.textContent = "Loading sessions...";
+
+      try {
+        const response = await fetch(`${API_BASE}/chat/sessions`, {
+          credentials: "same-origin"
+        });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+
+        const data = await response.json();
+
+        if (!data.sessions || !data.sessions.length) {
+          sessionsList.innerHTML = `
+            <div class="session-item">
+              <div class="session-title">No historical chats yet</div>
+              <div class="session-meta">Start a new chat first.</div>
+            </div>
+          `;
+          return;
+        }
+
+        sessionsList.innerHTML = data.sessions.map(session => `
+          <div
+            class="session-item ${session.session_id === currentSessionId ? "active" : ""}"
+            onclick="loadSession('${escapeJs(session.session_id)}')"
+          >
+            <div class="session-title">${escapeHtml(makeSessionTitle(session))}</div>
+            <div class="session-meta">${session.messages} messages</div>
+            <div class="session-meta">Last: ${escapeHtml(session.last_message_at || "-")}</div>
+          </div>
+        `).join("");
+
+      } catch (error) {
+        sessionsList.textContent = "Error loading sessions: " + error.message;
+      }
+    }
+
+    async function loadSession(sessionId) {
+      currentSessionId = sessionId;
+      currentMessages = [];
+      hideError();
+
+      document.getElementById("chatTitle").textContent = "Loading...";
+      document.getElementById("chatSubtitle").textContent = shortSessionId(sessionId);
+
+      renderMessages();
+
+      try {
+        const response = await fetch(`${API_BASE}/chat/sessions/${encodeURIComponent(sessionId)}`, {
+          credentials: "same-origin"
+        });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+
+        const data = await response.json();
+
+        currentMessages = Array.isArray(data.messages) ? data.messages : [];
+
+        document.getElementById("chatTitle").textContent = getSessionDisplayTitle(currentMessages);
+        document.getElementById("chatSubtitle").textContent = shortSessionId(sessionId);
+
+        renderMessages();
+        await loadSessions();
+
+      } catch (error) {
+        showError("Error loading session: " + error.message);
+      }
+    }
+
+    async function sendMessage() {
+      if (isSending) return;
+
+      const input = document.getElementById("messageInput");
+      const message = input.value.trim();
+
+      if (!message) return;
+
+      if (!currentSessionId) {
+        currentSessionId = createSessionId();
+      }
+
+      isSending = true;
+      hideError();
+
+      const userMessage = {
+        role: "user",
+        content: message,
+        created_at: new Date().toISOString()
+      };
+
+      currentMessages.push(userMessage);
+      input.value = "";
+
+      document.getElementById("chatTitle").textContent = getSessionDisplayTitle(currentMessages);
+      document.getElementById("chatSubtitle").textContent = shortSessionId(currentSessionId);
+
+      renderMessages();
+      setTyping(true);
+
+      const payload = {
+        session_id: currentSessionId,
+        message: message,
+        topic: document.getElementById("topicInput").value || "general",
+        user_country: document.getElementById("userCountryInput").value || null,
+        target_country: document.getElementById("targetCountryInput").value || null
+      };
+
+      try {
+        const response = await fetch(`${API_BASE}/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload),
+          credentials: "same-origin"
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "Chat request failed.");
+        }
+
+        const assistantMessage = {
+          role: "assistant",
+          content: data.answer || "No answer returned.",
+          created_at: new Date().toISOString()
+        };
+
+        currentMessages.push(assistantMessage);
+
+        renderMessages();
+        await loadSessions();
+
+      } catch (error) {
+        showError(error.message);
+
+        currentMessages.push({
+          role: "assistant",
+          content: "I could not generate a reliable answer.",
+          created_at: new Date().toISOString()
+        });
+
+        renderMessages();
+
+      } finally {
+        isSending = false;
+        setTyping(false);
+        input.focus();
+      }
+    }
+
+    async function deleteCurrentSession() {
+      if (!currentSessionId) {
+        return;
+      }
+
+      const confirmed = confirm(`Delete this chat session?\n\n${currentSessionId}`);
+
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/chat/sessions/${encodeURIComponent(currentSessionId)}`, {
+          method: "DELETE",
+          credentials: "same-origin"
+        });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "Could not delete session.");
+        }
+
+        newChat();
+        await loadSessions();
+
+      } catch (error) {
+        showError("Delete failed: " + error.message);
+      }
+    }
+
+    function renderMessages() {
+      const chatBody = document.getElementById("chatBody");
+
+      if (!currentMessages.length) {
+        chatBody.innerHTML = `
+          <div class="empty-state">
+            <h2>Start a new RAG chat</h2>
+            <p>
+              This is a full chat page, separate from the embeddable website chatbot.
+              It uses the same backend chat endpoint, but also lets you browse historical sessions.
+            </p>
+
+            <div class="suggestions">
+              <div class="suggestion" onclick="useSuggestion('What should I check for a Germany work visa?')">
+                What should I check for a Germany work visa?
+              </div>
+              <div class="suggestion" onclick="useSuggestion('Summarize the key points from the knowledge base.')">
+                Summarize the key points from the knowledge base.
+              </div>
+              <div class="suggestion" onclick="useSuggestion('Explain this in simpler language.')">
+                Explain this in simpler language.
+              </div>
+              <div class="suggestion" onclick="useSuggestion('چه چیزهایی برای کیفیت RAG فارسی مهم است؟')">
+                چه چیزهایی برای کیفیت RAG فارسی مهم است؟
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      chatBody.innerHTML = currentMessages.map(message => {
+        const role = message.role === "user" ? "user" : "assistant";
+
+        return `
+          <div class="message ${role}">
+            <div class="bubble ${role}">
+              ${escapeHtml(message.content)}
+              <div class="message-time">${escapeHtml(formatTime(message.created_at))}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function useSuggestion(text) {
+      document.getElementById("messageInput").value = text;
+      document.getElementById("messageInput").focus();
+    }
+
+    function handleComposerKeydown(event) {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    }
+
+    function setTyping(active) {
+      const typingIndicator = document.getElementById("typingIndicator");
+
+      if (active) {
+        typingIndicator.classList.add("active");
+      } else {
+        typingIndicator.classList.remove("active");
+      }
+    }
+
+    function showError(message) {
+      const errorBox = document.getElementById("errorBox");
+      errorBox.textContent = message;
+      errorBox.classList.add("active");
+    }
+
+    function hideError() {
+      const errorBox = document.getElementById("errorBox");
+      errorBox.textContent = "";
+      errorBox.classList.remove("active");
+    }
+
+    function makeSessionTitle(session) {
+      const shortId = shortSessionId(session.session_id);
+      return `${shortId}`;
+    }
+
+    function getSessionDisplayTitle(messages) {
+      const firstUserMessage = messages.find(message => message.role === "user");
+
+      if (!firstUserMessage) {
+        return "New Chat";
+      }
+
+      const text = firstUserMessage.content || "Chat";
+
+      if (text.length <= 48) {
+        return text;
+      }
+
+      return text.slice(0, 48) + "...";
+    }
+
+    function setActiveSessionInSidebar() {
+      document.querySelectorAll(".session-item").forEach(item => {
+        item.classList.remove("active");
+      });
+    }
+
+    function shortSessionId(sessionId) {
+      if (!sessionId) return "-";
+      if (sessionId.length <= 18) return sessionId;
+      return sessionId.slice(0, 8) + "..." + sessionId.slice(-6);
+    }
+
+    function formatTime(value) {
+      if (!value) return "";
+
+      try {
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+          return value;
+        }
+
+        return date.toLocaleString();
+      } catch {
+        return value;
+      }
+    }
+
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return "";
+
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeJs(text) {
+      return String(text)
+        .replaceAll("\\", "\\\\")
+        .replaceAll("'", "\\'");
+    }
+
+    function goToAdmin() {
+      window.location.href = "/app";
+    }
+
+    function openChatDemo() {
+      window.open("/chat-demo", "_blank");
+    }
+
+    async function signOut() {
+      try {
+        await fetch(`${API_BASE}/logout`, {
+          method: "POST",
+          credentials: "same-origin"
+        });
+      } catch (error) {
+        console.warn("Logout request failed:", error);
+      }
+
+      window.location.href = "/login";
+    }
+
+    newChat();
+    loadSessions();
+  </script>
+</body>
+</html>

@@ -65,6 +65,7 @@
       display: flex;
       gap: 10px;
       align-items: center;
+      flex-wrap: wrap;
     }
 
     .layout {
@@ -404,8 +405,10 @@
     </div>
 
     <div class="header-actions">
-      <button class="light" onclick="openChatDemo()">Open Chatbot</button>
-      <button class="light" onclick="loadDashboard()">Refresh</button>
+      <button class="light" onclick="openChatApp()">Open Chat App</button>
+  <button class="light" onclick="openChatDemo()">Open Widget Demo</button>
+  <button class="light" onclick="loadDashboard()">Refresh</button>
+  <button class="light" onclick="signOut()">Sign Out</button>
     </div>
   </header>
 
@@ -553,6 +556,21 @@
     const API_BASE = "";
     let selectedSessionId = null;
 
+    async function signOut() {
+      try {
+        await fetch(`${API_BASE}/logout`, {
+          method: "POST",
+          credentials: "same-origin"
+        });
+      } catch (error) {
+        console.warn("Logout request failed:", error);
+      }
+
+      window.location.href = "/login";
+    }
+    function openChatApp() {
+      window.location.href = "/chat-app";
+    }
     function showSection(sectionId, button) {
       document.querySelectorAll(".section").forEach(section => {
         section.classList.remove("active");
@@ -589,7 +607,10 @@
       const target = document.getElementById("systemInfo");
 
       try {
-        const response = await fetch(`${API_BASE}/`);
+        const response = await fetch(`${API_BASE}/`, {
+          credentials: "same-origin"
+        });
+
         const data = await response.json();
 
         target.textContent = JSON.stringify(data, null, 2);
@@ -606,7 +627,15 @@
       }
 
       try {
-        const response = await fetch(`${API_BASE}/documents`);
+        const response = await fetch(`${API_BASE}/documents`, {
+          credentials: "same-origin"
+        });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+
         const data = await response.json();
 
         document.getElementById("metricDocuments").textContent =
@@ -658,8 +687,14 @@
       try {
         const response = await fetch(`${API_BASE}/documents/upload`, {
           method: "POST",
-          body: formData
+          body: formData,
+          credentials: "same-origin"
         });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
 
         const data = await response.json();
         resultDiv.textContent = JSON.stringify(data, null, 2);
@@ -678,8 +713,14 @@
 
       try {
         const response = await fetch(`${API_BASE}/documents/${encodeURIComponent(source)}`, {
-          method: "DELETE"
+          method: "DELETE",
+          credentials: "same-origin"
         });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
 
         const data = await response.json();
         alert(JSON.stringify(data, null, 2));
@@ -759,8 +800,14 @@
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify(getAskPayload())
+          body: JSON.stringify(getAskPayload()),
+          credentials: "same-origin"
         });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
 
         const data = await response.json();
         resultDiv.textContent = JSON.stringify(data, null, 2);
@@ -819,7 +866,15 @@
       }
 
       try {
-        const response = await fetch(`${API_BASE}/chat/sessions`);
+        const response = await fetch(`${API_BASE}/chat/sessions`, {
+          credentials: "same-origin"
+        });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+
         const data = await response.json();
 
         document.getElementById("metricSessions").textContent =
@@ -867,7 +922,15 @@
       `;
 
       try {
-        const response = await fetch(`${API_BASE}/chat/sessions/${encodeURIComponent(sessionId)}`);
+        const response = await fetch(`${API_BASE}/chat/sessions/${encodeURIComponent(sessionId)}`, {
+          credentials: "same-origin"
+        });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+
         const data = await response.json();
 
         await loadSessions();
@@ -903,8 +966,14 @@
 
       try {
         const response = await fetch(`${API_BASE}/chat/sessions/${encodeURIComponent(sessionId)}`, {
-          method: "DELETE"
+          method: "DELETE",
+          credentials: "same-origin"
         });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
 
         const data = await response.json();
         alert(JSON.stringify(data, null, 2));
@@ -930,7 +999,15 @@
       }
 
       try {
-        const response = await fetch(`${API_BASE}/chat/messages/recent?limit=30`);
+        const response = await fetch(`${API_BASE}/chat/messages/recent?limit=30`, {
+          credentials: "same-origin"
+        });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+
         const data = await response.json();
 
         document.getElementById("metricMessages").textContent =
