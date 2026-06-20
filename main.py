@@ -168,26 +168,53 @@ def apply_safety_guardrails(
     This protects the application when the model is overconfident or ignores instructions.
     """
 
-    sensitive_keywords = [
-        "immigration",
-        "visa",
-        "work visa",
-        "residence permit",
-        "law",
-        "legal",
-        "contract",
-        "medical",
-        "health",
-        "financial",
-        "investment",
-        "tax"
-    ]
-
     text_to_check = f"{request.topic} {request.question}".lower()
 
-    is_sensitive = any(keyword in text_to_check for keyword in sensitive_keywords)
+    sensitive_categories = {
+        "immigration": [
+            "immigration",
+            "visa",
+            "work visa",
+            "residence permit",
+            "embassy",
+            "migration"
+        ],
+        "legal": [
+            "law",
+            "legal",
+            "contract",
+            "lawyer",
+            "court",
+            "lawsuit",
+            "agreement"
+        ],
+        "medical": [
+            "medical",
+            "health",
+            "doctor",
+            "medicine",
+            "treatment",
+            "diagnosis"
+        ],
+        "financial": [
+            "financial",
+            "investment",
+            "tax",
+            "loan",
+            "insurance",
+            "bank",
+            "money"
+        ]
+    }
 
-    if is_sensitive:
+    detected_category = None
+
+    for category, keywords in sensitive_categories.items():
+        if any(keyword in text_to_check for keyword in keywords):
+            detected_category = category
+            break
+
+    if detected_category:
         response.needs_human_review = True
 
         if response.confidence == "high":
@@ -199,22 +226,44 @@ def apply_safety_guardrails(
             "you qualify",
             "definitely",
             "guaranteed",
-            "approved"
+            "approved",
+            "you should sign",
+            "you do not need a lawyer"
         ]
 
         answer_lower = response.answer.lower()
+        has_risky_answer = any(phrase in answer_lower for phrase in risky_phrases)
 
-        if any(phrase in answer_lower for phrase in risky_phrases):
-            response.answer = (
-                "This may be possible, but eligibility cannot be confirmed from the provided information alone. "
-                "Immigration decisions depend on official requirements, your documents, job offer status, "
-                "education, experience, and the specific visa category."
-            )
-
+        if has_risky_answer:
             response.confidence = "low"
 
-    return response
+            if detected_category == "immigration":
+                response.answer = (
+                    "This may be possible, but eligibility cannot be confirmed from the provided information alone. "
+                    "Immigration decisions depend on official requirements, your documents, job offer status, "
+                    "education, experience, and the specific visa category."
+                )
 
+            elif detected_category == "legal":
+                response.answer = (
+                    "This cannot be safely confirmed from the provided information alone. "
+                    "Legal or contract decisions depend on the full contract text, local laws, obligations, risks, "
+                    "and your specific situation."
+                )
+
+            elif detected_category == "medical":
+                response.answer = (
+                    "This cannot be safely assessed from the provided information alone. "
+                    "Medical decisions depend on symptoms, history, examination, and advice from a qualified clinician."
+                )
+
+            elif detected_category == "financial":
+                response.answer = (
+                    "This cannot be safely confirmed from the provided information alone. "
+                    "Financial decisions depend on your goals, risk tolerance, local regulations, and personal situation."
+                )
+
+    return response
 
 @app.get("/")
 def health_check():

@@ -1,0 +1,15 @@
+Tender process general guidance:
+
+A tender request should be reviewed carefully before submission.
+
+Important items to extract include:
+- Submission deadline
+- Required documents
+- Technical requirements
+- Financial requirements
+- Evaluation criteria
+- Responsible department
+- Approval workflow
+- Risks and missing information
+
+A tender dashboard should help managers track request status, approvals, deadlines, decision history, and missing documents.

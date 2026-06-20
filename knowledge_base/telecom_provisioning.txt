@@ -1,0 +1,11 @@
+Telecom provisioning troubleshooting:
+
+If a service is active but the customer cannot connect, the issue may be related to provisioning, network configuration, device configuration, authentication, or service activation status.
+
+Useful checks include:
+- Confirm the service order status
+- Check provisioning completion
+- Verify customer profile and service parameters
+- Check IP assignment or authentication settings
+- Review network element configuration
+- Escalate to network support if provisioning is complete but connectivity still fails
