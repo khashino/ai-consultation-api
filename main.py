@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import sqlite3
 from pathlib import Path
 from typing import List, Literal, Optional
 
@@ -32,8 +33,8 @@ EMBEDDING_MODEL_NAME = os.getenv(
 TOP_K = int(os.getenv("TOP_K", "3"))
 MAX_DISTANCE = float(os.getenv("MAX_DISTANCE", "20"))
 
+CHAT_DB_PATH = os.getenv("CHAT_DB_PATH", "chat_history.db")
 MAX_CHAT_MESSAGES = int(os.getenv("MAX_CHAT_MESSAGES", "8"))
-CHAT_SESSIONS = {}
 
 Path(KNOWLEDGE_DIR).mkdir(parents=True, exist_ok=True)
 Path("static").mkdir(parents=True, exist_ok=True)
@@ -48,9 +49,9 @@ app = FastAPI(
     description=(
         "A local RAG-based AI consultation API using FastAPI, Ollama, "
         "ChromaDB, embeddings, document upload, backend guardrails, "
-        "and embeddable chatbot memory."
+        "embeddable chatbot, and SQLite chat persistence."
     ),
-    version="1.2.0"
+    version="1.3.0"
 )
 
 app.add_middleware(
@@ -110,6 +111,167 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     session_id: str
     answer: str
+
+
+class ChatMessage(BaseModel):
+    id: int
+    session_id: str
+    role: str
+    content: str
+    created_at: str
+
+
+def get_db_connection():
+    connection = sqlite3.connect(CHAT_DB_PATH)
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def init_chat_db() -> None:
+    connection = get_db_connection()
+
+    try:
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id
+            ON chat_messages(session_id)
+            """
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+
+def save_chat_message(session_id: str, role: str, content: str) -> None:
+    connection = get_db_connection()
+
+    try:
+        connection.execute(
+            """
+            INSERT INTO chat_messages (session_id, role, content)
+            VALUES (?, ?, ?)
+            """,
+            (session_id, role, content)
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+
+def get_recent_chat_messages(session_id: str, limit: int = MAX_CHAT_MESSAGES) -> List[dict]:
+    connection = get_db_connection()
+
+    try:
+        rows = connection.execute(
+            """
+            SELECT id, session_id, role, content, created_at
+            FROM chat_messages
+            WHERE session_id = ?
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (session_id, limit)
+        ).fetchall()
+
+        messages = [dict(row) for row in rows]
+        messages.reverse()
+
+        return messages
+
+    finally:
+        connection.close()
+
+
+def get_chat_history_text(session_id: str) -> str:
+    messages = get_recent_chat_messages(session_id)
+
+    if not messages:
+        return "No previous conversation."
+
+    return "\n".join(
+        [
+            f"{message['role']}: {message['content']}"
+            for message in messages
+        ]
+    )
+
+
+def list_chat_sessions_from_db() -> List[dict]:
+    connection = get_db_connection()
+
+    try:
+        rows = connection.execute(
+            """
+            SELECT
+                session_id,
+                COUNT(*) AS messages,
+                MIN(created_at) AS first_message_at,
+                MAX(created_at) AS last_message_at
+            FROM chat_messages
+            GROUP BY session_id
+            ORDER BY last_message_at DESC
+            """
+        ).fetchall()
+
+        return [dict(row) for row in rows]
+
+    finally:
+        connection.close()
+
+
+def get_chat_session_from_db(session_id: str) -> List[dict]:
+    connection = get_db_connection()
+
+    try:
+        rows = connection.execute(
+            """
+            SELECT id, session_id, role, content, created_at
+            FROM chat_messages
+            WHERE session_id = ?
+            ORDER BY id ASC
+            """,
+            (session_id,)
+        ).fetchall()
+
+        return [dict(row) for row in rows]
+
+    finally:
+        connection.close()
+
+
+def delete_chat_session_from_db(session_id: str) -> int:
+    connection = get_db_connection()
+
+    try:
+        cursor = connection.execute(
+            """
+            DELETE FROM chat_messages
+            WHERE session_id = ?
+            """,
+            (session_id,)
+        )
+
+        connection.commit()
+        return cursor.rowcount
+
+    finally:
+        connection.close()
 
 
 def chunk_text(text: str, chunk_size: int = 700, overlap: int = 100) -> List[str]:
@@ -194,43 +356,6 @@ def retrieve_context(question: str) -> List[RetrievedContext]:
             )
 
     return retrieved_contexts
-
-
-def get_chat_history_text(session_id: str) -> str:
-    messages = CHAT_SESSIONS.get(session_id, [])
-
-    if not messages:
-        return "No previous conversation."
-
-    recent_messages = messages[-MAX_CHAT_MESSAGES:]
-
-    return "\n".join(
-        [
-            f"{message['role']}: {message['content']}"
-            for message in recent_messages
-        ]
-    )
-
-
-def save_chat_turn(session_id: str, user_message: str, assistant_answer: str) -> None:
-    if session_id not in CHAT_SESSIONS:
-        CHAT_SESSIONS[session_id] = []
-
-    CHAT_SESSIONS[session_id].append(
-        {
-            "role": "user",
-            "content": user_message
-        }
-    )
-
-    CHAT_SESSIONS[session_id].append(
-        {
-            "role": "assistant",
-            "content": assistant_answer
-        }
-    )
-
-    CHAT_SESSIONS[session_id] = CHAT_SESSIONS[session_id][-MAX_CHAT_MESSAGES:]
 
 
 def build_prompt(
@@ -562,11 +687,17 @@ def apply_safety_guardrails(
     return response
 
 
+@app.on_event("startup")
+def startup_event():
+    init_chat_db()
+    logging.info("SQLite chat database initialized at: %s", CHAT_DB_PATH)
+
+
 @app.get("/")
 def health_check():
     return {
         "status": "ok",
-        "message": "AI Consultation API with RAG and chatbot memory is running",
+        "message": "AI Consultation API with RAG and SQLite chat memory is running",
         "model": OLLAMA_MODEL,
         "embedding_model": EMBEDDING_MODEL_NAME,
         "vector_db": "ChromaDB",
@@ -574,8 +705,9 @@ def health_check():
         "knowledge_dir": KNOWLEDGE_DIR,
         "top_k": TOP_K,
         "max_distance": MAX_DISTANCE,
+        "chat_db_path": CHAT_DB_PATH,
         "max_chat_messages": MAX_CHAT_MESSAGES,
-        "version": "1.2.0"
+        "version": "1.3.0"
     }
 
 
@@ -754,6 +886,12 @@ def chat(request: ChatRequest):
     retrieved_contexts = retrieve_context(request.message)
     prompt = build_chat_prompt(request, retrieved_contexts)
 
+    save_chat_message(
+        session_id=request.session_id,
+        role="user",
+        content=request.message
+    )
+
     try:
         raw_output, parsed_output = call_ollama(prompt)
         answer = str(parsed_output.get("answer", "")).strip()
@@ -765,10 +903,10 @@ def chat(request: ChatRequest):
         logging.warning("Chat fallback used. Reason: %s", str(error))
         answer = "I could not generate a reliable answer."
 
-    save_chat_turn(
+    save_chat_message(
         session_id=request.session_id,
-        user_message=request.message,
-        assistant_answer=answer
+        role="assistant",
+        content=answer
     )
 
     return ChatResponse(
@@ -779,39 +917,65 @@ def chat(request: ChatRequest):
 
 @app.get("/chat/sessions")
 def list_chat_sessions():
+    sessions = list_chat_sessions_from_db()
+
     return {
-        "total_sessions": len(CHAT_SESSIONS),
-        "sessions": [
-            {
-                "session_id": session_id,
-                "messages": len(messages)
-            }
-            for session_id, messages in CHAT_SESSIONS.items()
-        ]
+        "total_sessions": len(sessions),
+        "sessions": sessions
     }
 
 
 @app.get("/chat/sessions/{session_id}")
 def get_chat_session(session_id: str):
+    messages = get_chat_session_from_db(session_id)
+
     return {
         "session_id": session_id,
-        "messages": CHAT_SESSIONS.get(session_id, [])
+        "messages": messages
     }
 
 
 @app.delete("/chat/sessions/{session_id}")
 def delete_chat_session(session_id: str):
-    if session_id in CHAT_SESSIONS:
-        del CHAT_SESSIONS[session_id]
+    deleted_count = delete_chat_session_from_db(session_id)
+
+    if deleted_count == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No chat session found: {session_id}"
+        )
+
+    return {
+        "message": "Chat session deleted.",
+        "session_id": session_id,
+        "deleted_messages": deleted_count
+    }
+
+
+@app.get("/chat/messages/recent")
+def get_recent_chat_messages_endpoint(limit: int = 20):
+    connection = get_db_connection()
+
+    try:
+        rows = connection.execute(
+            """
+            SELECT id, session_id, role, content, created_at
+            FROM chat_messages
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (limit,)
+        ).fetchall()
+
+        messages = [dict(row) for row in rows]
+
         return {
-            "message": "Chat session deleted.",
-            "session_id": session_id
+            "limit": limit,
+            "messages": messages
         }
 
-    raise HTTPException(
-        status_code=404,
-        detail=f"No chat session found: {session_id}"
-    )
+    finally:
+        connection.close()
 
 
 @app.post("/debug")
