@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Consultation RAG Platform</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 0;
+      color: #1f2937;
+    }
+
+    header {
+      background: #111827;
+      color: white;
+      padding: 24px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      color: #d1d5db;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 20px;
+      color: #111827;
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      margin-bottom: 6px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    button {
+      margin-top: 14px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button.danger {
+      background: #dc2626;
+    }
+
+    button.danger:hover {
+      background: #b91c1c;
+    }
+
+    .result {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 14px;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-right: 6px;
+    }
+
+    .low {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .medium {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .high {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .review {
+      background: #ede9fe;
+      color: #5b21b6;
+    }
+
+    .source {
+      background: #e0f2fe;
+      color: #075985;
+    }
+
+    .document-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+      gap: 10px;
+    }
+
+    .document-name {
+      font-size: 14px;
+      word-break: break-all;
+    }
+
+    .small {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .full-width {
+      grid-column: span 2;
+    }
+
+    @media (max-width: 800px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .full-width {
+        grid-column: span 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>AI Consultation RAG Platform</h1>
+    <p>FastAPI + Ollama + ChromaDB + Embeddings + Guardrails</p>
+  </header>
+
+  <main class="container">
+
+    <section class="card">
+      <h2>Ask a Question</h2>
+
+      <label>Question</label>
+      <textarea id="question">What should I check for a Germany work visa?</textarea>
+
+      <label>Topic</label>
+      <input id="topic" value="immigration" />
+
+      <label>User Country</label>
+      <input id="userCountry" value="Iran" />
+
+      <label>Target Country</label>
+      <input id="targetCountry" value="Germany" />
+
+      <button onclick="askQuestion()">Ask</button>
+
+      <div id="answerResult" class="result">Answer will appear here...</div>
+    </section>
+
+    <section class="card">
+      <h2>Upload Document</h2>
+
+      <label>Select .txt file</label>
+      <input id="fileInput" type="file" accept=".txt" />
+
+      <button onclick="uploadDocument()">Upload and Ingest</button>
+
+      <div id="uploadResult" class="result">Upload result will appear here...</div>
+    </section>
+
+    <section class="card full-width">
+      <h2>Documents</h2>
+      <button onclick="loadDocuments()">Refresh Documents</button>
+      <div id="documentsResult" class="result">Documents will appear here...</div>
+    </section>
+
+    <section class="card full-width">
+      <h2>Search Knowledge Base</h2>
+
+      <label>Search Question</label>
+      <textarea id="searchQuestion">چرا کیفیت embedding برای RAG فارسی مهم است؟</textarea>
+
+      <label>Topic</label>
+      <input id="searchTopic" value="AI" />
+
+      <button onclick="searchKnowledge()">Search</button>
+
+      <div id="searchResult" class="result">Search results will appear here...</div>
+    </section>
+
+  </main>
+
+  <script>
+    const API_BASE = "";
+
+    function getPayload() {
+      return {
+        question: document.getElementById("question").value,
+        topic: document.getElementById("topic").value,
+        user_country: document.getElementById("userCountry").value || null,
+        target_country: document.getElementById("targetCountry").value || null
+      };
+    }
+
+    async function askQuestion() {
+      const resultDiv = document.getElementById("answerResult");
+      resultDiv.textContent = "Thinking...";
+
+      try {
+        const response = await fetch(`${API_BASE}/ask`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(getPayload())
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          resultDiv.textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+
+        const sources = data.sources.map(
+          source => `<span class="badge source">${source}</span>`
+        ).join(" ");
+
+        const steps = data.suggested_next_steps.map(
+          step => `• ${step}`
+        ).join("\n");
+
+        resultDiv.innerHTML = `
+          <div>
+            <span class="badge ${data.confidence}">Confidence: ${data.confidence}</span>
+            <span class="badge review">Human Review: ${data.needs_human_review}</span>
+          </div>
+
+          <h3>Answer</h3>
+          <p>${escapeHtml(data.answer)}</p>
+
+          <h3>Suggested Next Steps</h3>
+          <pre>${escapeHtml(steps)}</pre>
+
+          <h3>Sources</h3>
+          <div>${sources || "No sources"}</div>
+        `;
+      } catch (error) {
+        resultDiv.textContent = "Error: " + error.message;
+      }
+    }
+
+    async function uploadDocument() {
+      const fileInput = document.getElementById("fileInput");
+      const resultDiv = document.getElementById("uploadResult");
+
+      if (!fileInput.files.length) {
+        resultDiv.textContent = "Please select a .txt file first.";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      resultDiv.textContent = "Uploading and ingesting...";
+
+      try {
+        const response = await fetch(`${API_BASE}/documents/upload`, {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+        resultDiv.textContent = JSON.stringify(data, null, 2);
+
+        await loadDocuments();
+      } catch (error) {
+        resultDiv.textContent = "Error: " + error.message;
+      }
+    }
+
+    async function loadDocuments() {
+      const resultDiv = document.getElementById("documentsResult");
+      resultDiv.textContent = "Loading documents...";
+
+      try {
+        const response = await fetch(`${API_BASE}/documents`);
+        const data = await response.json();
+
+        if (!data.documents || !data.documents.length) {
+          resultDiv.textContent = "No documents found.";
+          return;
+        }
+
+        resultDiv.innerHTML = data.documents.map(doc => `
+          <div class="document-item">
+            <div>
+              <div class="document-name">${escapeHtml(doc.source)}</div>
+              <div class="small">${doc.chunks} chunks</div>
+            </div>
+            <button class="danger" onclick="deleteDocument('${escapeJs(doc.source)}')">Delete</button>
+          </div>
+        `).join("");
+
+      } catch (error) {
+        resultDiv.textContent = "Error: " + error.message;
+      }
+    }
+
+    async function deleteDocument(source) {
+      const confirmed = confirm(`Delete document: ${source}?`);
+      if (!confirmed) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/documents/${encodeURIComponent(source)}`, {
+          method: "DELETE"
+        });
+
+        const data = await response.json();
+        alert(JSON.stringify(data, null, 2));
+
+        await loadDocuments();
+      } catch (error) {
+        alert("Error: " + error.message);
+      }
+    }
+
+    async function searchKnowledge() {
+      const resultDiv = document.getElementById("searchResult");
+      resultDiv.textContent = "Searching...";
+
+      const payload = {
+        question: document.getElementById("searchQuestion").value,
+        topic: document.getElementById("searchTopic").value,
+        user_country: null,
+        target_country: null
+      };
+
+      try {
+        const response = await fetch(`${API_BASE}/search`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        resultDiv.innerHTML = data.map((item, index) => `
+          <div style="margin-bottom: 18px;">
+            <strong>Result ${index + 1}</strong><br/>
+            <span class="badge source">${escapeHtml(item.source)}</span>
+            <span class="badge medium">Distance: ${Number(item.distance).toFixed(2)}</span>
+            <pre>${escapeHtml(item.content)}</pre>
+          </div>
+        `).join("") || "No results found.";
+
+      } catch (error) {
+        resultDiv.textContent = "Error: " + error.message;
+      }
+    }
+
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return "";
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeJs(text) {
+      return String(text).replaceAll("'", "\\'");
+    }
+
+    loadDocuments();
+  </script>
+</body>
+</html>

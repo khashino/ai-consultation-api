@@ -10,7 +10,9 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field, ValidationError
 from sentence_transformers import SentenceTransformer
-
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
@@ -44,6 +46,16 @@ app = FastAPI(
     ),
     version="0.8.0"
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For learning. Restrict this in production.
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 logging.info("Loading embedding model: %s", EMBEDDING_MODEL_NAME)
 embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
@@ -460,6 +472,10 @@ def health_check():
         "version": "0.8.0"
     }
 
+@app.get("/app")
+def frontend_app():
+    return FileResponse("static/index.html")
+
 
 @app.post("/documents/upload", response_model=UploadResponse)
 async def upload_document(file: UploadFile = File(...)):
@@ -638,7 +654,7 @@ def delete_document(source: str):
         )
     
 
-    
+
 @app.post("/debug")
 def debug_consultation(request: ConsultationRequest):
     """

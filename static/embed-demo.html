@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Embed Demo Page</title>
+</head>
+<body>
+  <h1>Example Website</h1>
+  <p>This page embeds the AI Consultation chatbot widget.</p>
+
+  <script>
+    window.AI_CHATBOT_API_BASE = "http://127.0.0.1:8000";
+    window.AI_CHATBOT_TITLE = "RAG Assistant";
+    window.AI_CHATBOT_TOPIC = "AI";
+    window.AI_CHATBOT_USER_COUNTRY = "Iran";
+    window.AI_CHATBOT_TARGET_COUNTRY = null;
+  </script>
+
+  <script src="http://127.0.0.1:8000/static/chatbot-widget.js"></script>
+</body>
+</html>
