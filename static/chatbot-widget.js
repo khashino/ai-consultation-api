@@ -3,7 +3,7 @@
     window.AI_CHATBOT_API_BASE || "http://127.0.0.1:8000";
 
   const BOT_TITLE =
-    window.AI_CHATBOT_TITLE || "AI Consultation Assistant";
+    window.AI_CHATBOT_TITLE || "AI Assistant";
 
   const DEFAULT_TOPIC =
     window.AI_CHATBOT_TOPIC || "general";
@@ -13,6 +13,15 @@
 
   const TARGET_COUNTRY =
     window.AI_CHATBOT_TARGET_COUNTRY || null;
+
+  const STORAGE_KEY = "ai_chatbot_session_id";
+
+  let SESSION_ID = localStorage.getItem(STORAGE_KEY);
+
+  if (!SESSION_ID) {
+    SESSION_ID = createSessionId();
+    localStorage.setItem(STORAGE_KEY, SESSION_ID);
+  }
 
   const styles = `
     #ai-chatbot-button {
@@ -58,12 +67,27 @@
       align-items: center;
     }
 
+    #ai-chatbot-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #ai-chatbot-reset,
     #ai-chatbot-close {
       background: transparent;
       border: none;
       color: white;
-      font-size: 20px;
       cursor: pointer;
+    }
+
+    #ai-chatbot-reset {
+      font-size: 12px;
+      opacity: 0.85;
+    }
+
+    #ai-chatbot-close {
+      font-size: 20px;
     }
 
     #ai-chatbot-messages {
@@ -106,47 +130,6 @@
       color: #1f2937;
       border: 1px solid #e5e7eb;
       border-bottom-left-radius: 4px;
-    }
-
-    .ai-meta {
-      margin-top: 8px;
-      font-size: 11px;
-      color: #6b7280;
-    }
-
-    .ai-badge {
-      display: inline-block;
-      padding: 3px 7px;
-      border-radius: 999px;
-      margin-right: 4px;
-      margin-top: 4px;
-      font-size: 11px;
-      font-weight: bold;
-    }
-
-    .ai-badge.low {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .ai-badge.medium {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    .ai-badge.high {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .ai-badge.review {
-      background: #ede9fe;
-      color: #5b21b6;
-    }
-
-    .ai-badge.source {
-      background: #e0f2fe;
-      color: #075985;
     }
 
     #ai-chatbot-input-area {
@@ -214,7 +197,10 @@
     windowBox.innerHTML = `
       <div id="ai-chatbot-header">
         <span>${escapeHtml(BOT_TITLE)}</span>
-        <button id="ai-chatbot-close">×</button>
+        <div id="ai-chatbot-header-actions">
+          <button id="ai-chatbot-reset" title="Start new chat">New</button>
+          <button id="ai-chatbot-close">×</button>
+        </div>
       </div>
 
       <div id="ai-chatbot-messages"></div>
@@ -236,6 +222,7 @@
     const input = document.getElementById("ai-chatbot-input");
     const sendButton = document.getElementById("ai-chatbot-send");
     const closeButton = document.getElementById("ai-chatbot-close");
+    const resetButton = document.getElementById("ai-chatbot-reset");
 
     button.addEventListener("click", function () {
       windowBox.style.display =
@@ -248,6 +235,24 @@
 
     closeButton.addEventListener("click", function () {
       windowBox.style.display = "none";
+    });
+
+    resetButton.addEventListener("click", async function () {
+      const oldSessionId = SESSION_ID;
+
+      SESSION_ID = createSessionId();
+      localStorage.setItem(STORAGE_KEY, SESSION_ID);
+
+      messages.innerHTML = "";
+      addBotMessage("New chat started. Ask me a question from the knowledge base.");
+
+      try {
+        await fetch(`${API_BASE}/chat/sessions/${encodeURIComponent(oldSessionId)}`, {
+          method: "DELETE"
+        });
+      } catch (error) {
+        // Ignore cleanup errors in widget.
+      }
     });
 
     sendButton.addEventListener("click", sendMessage);
@@ -274,13 +279,14 @@
       const loadingId = addBotMessage("Thinking...");
 
       try {
-        const response = await fetch(`${API_BASE}/ask`, {
+        const response = await fetch(`${API_BASE}/chat`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            question: question,
+            session_id: SESSION_ID,
+            message: question,
             topic: DEFAULT_TOPIC,
             user_country: USER_COUNTRY,
             target_country: TARGET_COUNTRY
@@ -292,14 +298,14 @@
         removeMessage(loadingId);
 
         if (!response.ok) {
-          addBotMessage("Error:\n" + JSON.stringify(data, null, 2));
+          addBotMessage("Sorry, something went wrong.");
           return;
         }
 
         addBotResponse(data);
       } catch (error) {
         removeMessage(loadingId);
-        addBotMessage("Could not connect to the AI API: " + error.message);
+        addBotMessage("Could not connect to the AI API.");
       } finally {
         sendButton.disabled = false;
         input.focus();
@@ -315,12 +321,8 @@
     }
 
     function addBotResponse(data) {
-  const html = `
-    <div>${escapeHtml(data.answer || "No answer returned.")}</div>
-  `;
-
-  addMessage("bot", html);
-}
+      addMessage("bot", escapeHtml(data.answer || "No answer returned."));
+    }
 
     function addMessage(type, html) {
       const id = "msg-" + Date.now() + "-" + Math.random().toString(16).slice(2);
@@ -346,6 +348,14 @@
         element.remove();
       }
     }
+  }
+
+  function createSessionId() {
+    if (window.crypto && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+
+    return "session-" + Date.now() + "-" + Math.random().toString(16).slice(2);
   }
 
   function escapeHtml(text) {

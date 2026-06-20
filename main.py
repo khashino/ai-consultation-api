@@ -8,11 +8,12 @@ import chromadb
 import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from pydantic import BaseModel, Field, ValidationError
-from sentence_transformers import SentenceTransformer
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field, ValidationError
+from sentence_transformers import SentenceTransformer
+
 
 load_dotenv()
 
@@ -31,7 +32,11 @@ EMBEDDING_MODEL_NAME = os.getenv(
 TOP_K = int(os.getenv("TOP_K", "3"))
 MAX_DISTANCE = float(os.getenv("MAX_DISTANCE", "20"))
 
+MAX_CHAT_MESSAGES = int(os.getenv("MAX_CHAT_MESSAGES", "8"))
+CHAT_SESSIONS = {}
+
 Path(KNOWLEDGE_DIR).mkdir(parents=True, exist_ok=True)
+Path("static").mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,14 +47,15 @@ app = FastAPI(
     title="AI Consultation API",
     description=(
         "A local RAG-based AI consultation API using FastAPI, Ollama, "
-        "ChromaDB, embeddings, document upload, and backend guardrails."
+        "ChromaDB, embeddings, document upload, backend guardrails, "
+        "and embeddable chatbot memory."
     ),
-    version="0.8.0"
+    version="1.2.0"
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For learning. Restrict this in production.
+    allow_origins=["*"],  # Learning mode. Restrict this in production.
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -93,11 +99,20 @@ class UploadResponse(BaseModel):
     status: str
 
 
-def chunk_text(text: str, chunk_size: int = 700, overlap: int = 100) -> List[str]:
-    """
-    Splits long text into overlapping chunks for embedding.
-    """
+class ChatRequest(BaseModel):
+    session_id: str = Field(..., min_length=3)
+    message: str = Field(..., min_length=1)
+    topic: str = "general"
+    user_country: Optional[str] = None
+    target_country: Optional[str] = None
 
+
+class ChatResponse(BaseModel):
+    session_id: str
+    answer: str
+
+
+def chunk_text(text: str, chunk_size: int = 700, overlap: int = 100) -> List[str]:
     chunks = []
     start = 0
 
@@ -114,10 +129,6 @@ def chunk_text(text: str, chunk_size: int = 700, overlap: int = 100) -> List[str
 
 
 def ingest_text_document(filename: str, text: str) -> dict:
-    """
-    Chunks a text document, embeds each chunk, and stores it in ChromaDB.
-    """
-
     chunks = chunk_text(text)
 
     if not chunks:
@@ -158,11 +169,6 @@ def ingest_text_document(filename: str, text: str) -> dict:
 
 
 def retrieve_context(question: str) -> List[RetrievedContext]:
-    """
-    Converts the user question into an embedding, searches ChromaDB,
-    and returns the most relevant chunks.
-    """
-
     query_embedding = embedding_model.encode(question).tolist()
 
     results = knowledge_collection.query(
@@ -190,6 +196,43 @@ def retrieve_context(question: str) -> List[RetrievedContext]:
     return retrieved_contexts
 
 
+def get_chat_history_text(session_id: str) -> str:
+    messages = CHAT_SESSIONS.get(session_id, [])
+
+    if not messages:
+        return "No previous conversation."
+
+    recent_messages = messages[-MAX_CHAT_MESSAGES:]
+
+    return "\n".join(
+        [
+            f"{message['role']}: {message['content']}"
+            for message in recent_messages
+        ]
+    )
+
+
+def save_chat_turn(session_id: str, user_message: str, assistant_answer: str) -> None:
+    if session_id not in CHAT_SESSIONS:
+        CHAT_SESSIONS[session_id] = []
+
+    CHAT_SESSIONS[session_id].append(
+        {
+            "role": "user",
+            "content": user_message
+        }
+    )
+
+    CHAT_SESSIONS[session_id].append(
+        {
+            "role": "assistant",
+            "content": assistant_answer
+        }
+    )
+
+    CHAT_SESSIONS[session_id] = CHAT_SESSIONS[session_id][-MAX_CHAT_MESSAGES:]
+
+
 def build_prompt(
     request: ConsultationRequest,
     retrieved_contexts: List[RetrievedContext]
@@ -205,15 +248,16 @@ def build_prompt(
         context_text = "No relevant context was found in the local knowledge base."
 
     return f"""
-You are an AI consultation assistant inside a backend API.
+You are a RAG assistant inside a backend API.
 
-Your task:
-Answer the user's question using the provided retrieved context.
+You must answer ONLY using the retrieved context.
 
 Important rules:
-- Use the retrieved context as the main source of truth.
-- If the retrieved context is not enough, say that the local knowledge base does not contain enough information.
-- Do not invent official rules, laws, dates, prices, or guarantees.
+- Do not answer from general knowledge.
+- Do not introduce yourself as a chatbot or computer program.
+- If the user asks who you are, say: "I am a RAG assistant that answers using the local knowledge base."
+- If the retrieved context does not contain enough information, say: "I can only answer based on the local knowledge base, and I could not find enough relevant information for this question."
+- Do not invent facts, laws, prices, dates, requirements, or guarantees.
 - Do not make final legal, immigration, medical, financial, or contract decisions.
 - If the question involves immigration, law, money, health, contracts, or important personal decisions, set needs_human_review to true.
 - Keep the answer practical and short.
@@ -234,27 +278,82 @@ User question:
 
 Return JSON exactly in this shape:
 {{
-  "answer": "short practical answer based on the retrieved context",
-  "confidence": "low | medium | high",
+  "answer": "short practical answer based only on the retrieved context",
+  "confidence": "low",
   "needs_human_review": true,
-  "suggested_next_steps": ["step 1", "step 2", "step 3"],
+  "suggested_next_steps": [
+    "Check the relevant source document",
+    "Ask a more specific question",
+    "Request human review if needed"
+  ],
   "sources": ["source_file_name.txt"]
 }}
 
 Field rules:
 - confidence must be exactly one of: low, medium, high
 - needs_human_review must be true or false
-- suggested_next_steps must contain 3 to 5 short practical steps
+- suggested_next_steps must contain 3 to 5 real practical steps
+- suggested_next_steps must not contain placeholder values like "step 1", "step 2", or "step 3"
 - sources must contain only file names from the retrieved context
 """.strip()
 
 
-def extract_json_from_text(text: str) -> dict:
-    """
-    Tries to parse JSON directly first.
-    If the model adds extra text, tries to extract the first JSON object.
-    """
+def build_chat_prompt(
+    request: ChatRequest,
+    retrieved_contexts: List[RetrievedContext]
+) -> str:
+    if retrieved_contexts:
+        context_text = "\n\n".join(
+            [
+                f"Source: {item.source}, chunk: {item.chunk_index}\n{item.content}"
+                for item in retrieved_contexts
+            ]
+        )
+    else:
+        context_text = "No relevant context was found in the local knowledge base."
 
+    chat_history = get_chat_history_text(request.session_id)
+
+    return f"""
+You are a helpful RAG chatbot embedded inside a website.
+
+You must answer using:
+1. The retrieved context from the local knowledge base
+2. The previous conversation only to understand references like "it", "that", "explain more", or "give me examples"
+
+Important rules:
+- Do not answer from general knowledge if the retrieved context is not enough.
+- If the user asks who you are, say: "I am a RAG assistant that answers using the local knowledge base."
+- If the user refers to something from previous conversation, use chat history to understand the reference.
+- If the local knowledge base does not contain enough information, say: "I can only answer based on the local knowledge base, and I could not find enough relevant information for this question."
+- Do not invent facts, laws, prices, dates, requirements, or guarantees.
+- Keep the answer short, friendly, and conversational.
+- Do not use markdown.
+- Return only valid JSON.
+- Do not add text before or after the JSON.
+
+Retrieved context:
+{context_text}
+
+Previous conversation:
+{chat_history}
+
+User context:
+- Topic: {request.topic}
+- User country: {request.user_country or "not provided"}
+- Target country: {request.target_country or "not provided"}
+
+Current user message:
+{request.message}
+
+Return JSON exactly in this shape:
+{{
+  "answer": "short conversational answer"
+}}
+""".strip()
+
+
+def extract_json_from_text(text: str) -> dict:
     try:
         return json.loads(text)
     except json.JSONDecodeError:
@@ -271,10 +370,6 @@ def extract_json_from_text(text: str) -> dict:
 
 
 def fallback_response(reason: str) -> ConsultationResponse:
-    """
-    Safe fallback when the local model returns bad JSON or invalid schema.
-    """
-
     logging.warning("Using fallback response. Reason: %s", reason)
 
     return ConsultationResponse(
@@ -331,12 +426,6 @@ def clean_sources(
     model_sources: List[str],
     retrieved_contexts: List[RetrievedContext]
 ) -> List[str]:
-    """
-    Keeps only real source file names.
-    If the model returns invalid source values like 'chunk:1',
-    replace them with sources from retrieved context.
-    """
-
     valid_sources = {item.source for item in retrieved_contexts}
 
     cleaned = [
@@ -350,15 +439,31 @@ def clean_sources(
     return sorted(valid_sources)
 
 
+def clean_suggested_steps(response: ConsultationResponse) -> ConsultationResponse:
+    bad_steps = {"step 1", "step 2", "step 3", "string"}
+
+    normalized_steps = {
+        step.strip().lower()
+        for step in response.suggested_next_steps
+    }
+
+    if normalized_steps.intersection(bad_steps):
+        response.suggested_next_steps = [
+            "Check the relevant source document",
+            "Ask a more specific question",
+            "Request human review if needed"
+        ]
+
+        if response.confidence == "high":
+            response.confidence = "low"
+
+    return response
+
+
 def apply_safety_guardrails(
     request: ConsultationRequest,
     response: ConsultationResponse
 ) -> ConsultationResponse:
-    """
-    Enforces deterministic business/safety rules after the LLM response.
-    This protects the application when the model is overconfident or ignores instructions.
-    """
-
     text_to_check = f"{request.topic} {request.question}".lower()
 
     sensitive_categories = {
@@ -461,7 +566,7 @@ def apply_safety_guardrails(
 def health_check():
     return {
         "status": "ok",
-        "message": "AI Consultation API with RAG is running",
+        "message": "AI Consultation API with RAG and chatbot memory is running",
         "model": OLLAMA_MODEL,
         "embedding_model": EMBEDDING_MODEL_NAME,
         "vector_db": "ChromaDB",
@@ -469,21 +574,23 @@ def health_check():
         "knowledge_dir": KNOWLEDGE_DIR,
         "top_k": TOP_K,
         "max_distance": MAX_DISTANCE,
-        "version": "0.8.0"
+        "max_chat_messages": MAX_CHAT_MESSAGES,
+        "version": "1.2.0"
     }
+
 
 @app.get("/app")
 def frontend_app():
     return FileResponse("static/index.html")
 
 
+@app.get("/chat-demo")
+def chat_demo():
+    return FileResponse("static/embed-demo.html")
+
+
 @app.post("/documents/upload", response_model=UploadResponse)
 async def upload_document(file: UploadFile = File(...)):
-    """
-    Uploads a .txt document, saves it locally, chunks it,
-    embeds it, and stores it in ChromaDB.
-    """
-
     if not file.filename:
         raise HTTPException(
             status_code=400,
@@ -526,56 +633,14 @@ async def upload_document(file: UploadFile = File(...)):
         )
 
 
-@app.post("/search", response_model=List[RetrievedContext])
-def search_knowledge_base(request: ConsultationRequest):
-    """
-    Searches the vector database without calling the LLM.
-    Useful for debugging retrieval quality.
-    """
-
-    return retrieve_context(request.question)
-
-
-@app.post("/ask", response_model=ConsultationResponse)
-def ask_consultation(request: ConsultationRequest):
-    retrieved_contexts = retrieve_context(request.question)
-    prompt = build_prompt(request, retrieved_contexts)
-
-    try:
-        raw_output, ai_output = call_ollama(prompt)
-        validated_response = ConsultationResponse(**ai_output)
-
-        validated_response.sources = clean_sources(
-            model_sources=validated_response.sources,
-            retrieved_contexts=retrieved_contexts
-        )
-
-        safe_response = apply_safety_guardrails(
-            request=request,
-            response=validated_response
-        )
-
-        return safe_response
-
-    except ValidationError as error:
-        return fallback_response(f"Schema validation failed: {str(error)}")
-
-    except ValueError as error:
-        return fallback_response(str(error))
-
 @app.get("/documents")
 def list_documents():
-    """
-    Lists documents currently stored in the ChromaDB collection.
-    """
-
     try:
         data = knowledge_collection.get(
             include=["metadatas"]
         )
 
         metadatas = data.get("metadatas", [])
-
         document_map = {}
 
         for metadata in metadatas:
@@ -605,15 +670,10 @@ def list_documents():
             status_code=500,
             detail=f"Failed to list documents: {str(error)}"
         )
-    
+
 
 @app.delete("/documents/{source}")
 def delete_document(source: str):
-    """
-    Deletes all chunks for a document from the ChromaDB collection
-    and removes the local .txt file if it exists.
-    """
-
     try:
         data = knowledge_collection.get(
             where={"source": source},
@@ -652,17 +712,110 @@ def delete_document(source: str):
             status_code=500,
             detail=f"Failed to delete document: {str(error)}"
         )
-    
+
+
+@app.post("/search", response_model=List[RetrievedContext])
+def search_knowledge_base(request: ConsultationRequest):
+    return retrieve_context(request.question)
+
+
+@app.post("/ask", response_model=ConsultationResponse)
+def ask_consultation(request: ConsultationRequest):
+    retrieved_contexts = retrieve_context(request.question)
+    prompt = build_prompt(request, retrieved_contexts)
+
+    try:
+        raw_output, ai_output = call_ollama(prompt)
+        validated_response = ConsultationResponse(**ai_output)
+
+        validated_response.sources = clean_sources(
+            model_sources=validated_response.sources,
+            retrieved_contexts=retrieved_contexts
+        )
+
+        validated_response = clean_suggested_steps(validated_response)
+
+        safe_response = apply_safety_guardrails(
+            request=request,
+            response=validated_response
+        )
+
+        return safe_response
+
+    except ValidationError as error:
+        return fallback_response(f"Schema validation failed: {str(error)}")
+
+    except ValueError as error:
+        return fallback_response(str(error))
+
+
+@app.post("/chat", response_model=ChatResponse)
+def chat(request: ChatRequest):
+    retrieved_contexts = retrieve_context(request.message)
+    prompt = build_chat_prompt(request, retrieved_contexts)
+
+    try:
+        raw_output, parsed_output = call_ollama(prompt)
+        answer = str(parsed_output.get("answer", "")).strip()
+
+        if not answer:
+            answer = "I could not generate a reliable answer."
+
+    except Exception as error:
+        logging.warning("Chat fallback used. Reason: %s", str(error))
+        answer = "I could not generate a reliable answer."
+
+    save_chat_turn(
+        session_id=request.session_id,
+        user_message=request.message,
+        assistant_answer=answer
+    )
+
+    return ChatResponse(
+        session_id=request.session_id,
+        answer=answer
+    )
+
+
+@app.get("/chat/sessions")
+def list_chat_sessions():
+    return {
+        "total_sessions": len(CHAT_SESSIONS),
+        "sessions": [
+            {
+                "session_id": session_id,
+                "messages": len(messages)
+            }
+            for session_id, messages in CHAT_SESSIONS.items()
+        ]
+    }
+
+
+@app.get("/chat/sessions/{session_id}")
+def get_chat_session(session_id: str):
+    return {
+        "session_id": session_id,
+        "messages": CHAT_SESSIONS.get(session_id, [])
+    }
+
+
+@app.delete("/chat/sessions/{session_id}")
+def delete_chat_session(session_id: str):
+    if session_id in CHAT_SESSIONS:
+        del CHAT_SESSIONS[session_id]
+        return {
+            "message": "Chat session deleted.",
+            "session_id": session_id
+        }
+
+    raise HTTPException(
+        status_code=404,
+        detail=f"No chat session found: {session_id}"
+    )
 
 
 @app.post("/debug")
 def debug_consultation(request: ConsultationRequest):
-    """
-    Debug endpoint for learning.
-    Shows retrieved context, prompt, raw model output, and parsed JSON.
-    Do not expose this endpoint in production.
-    """
-
     retrieved_contexts = retrieve_context(request.question)
     prompt = build_prompt(request, retrieved_contexts)
 
