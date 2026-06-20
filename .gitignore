@@ -1,54 +1,44 @@
-# Python
+# Python cache
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-*.so
-.Python
-.python-version
+*$py.class
 
 # Virtual environments
 venv/
 .venv/
 env/
-ENV/
 
-# Environment variables
+# Environment files
 .env
 .env.*
 !.env.example
 
 # Logs
 *.log
-logs/
 
-# OS / editor
-.DS_Store
-Thumbs.db
+# IDE/editor
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# Test / cache
+# Test/type/lint caches
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
 htmlcov/
 
-# Local databases
+# Databases and local runtime data
 *.db
 *.sqlite
 *.sqlite3
+chat_history.db
+runtime_config.json
 
-# ChromaDB vector database
+# Vector database and uploaded knowledge files
 chroma_db/
-
-# Uploaded knowledge base documents
 knowledge_base/
 
-# Model / ML cache
+# Model/cache files
 .cache/
 models/
 hf_cache/
@@ -58,31 +48,18 @@ sentence_transformers/
 *.pt
 *.onnx
 
-# Old backups
-main_old.py
-
-# Local output files
+# Temporary/output files
 outputs/
 tmp/
 temp/
-
-# Node / frontend if added later
-node_modules/
-dist/
-build/
-
-
-.env
-venv/
-__pycache__/
-*.db
-chroma_db/
-knowledge_base/
-main_old.py
-.pytest_cache/
-
 scripts/*.log
 scripts/output/
 scripts/outputs/
 
-runtime_config.json
+# Frontend build files
+node_modules/
+dist/
+build/
+
+# Old backup files
+main_old.py
