@@ -30,6 +30,9 @@ class Settings:
 
     app_version: str = "1.4.0"
 
+    admin_username: str = os.getenv("ADMIN_USERNAME", "admin")
+    admin_password: str = os.getenv("ADMIN_PASSWORD", "admin")
+
     def ensure_directories(self) -> None:
         Path(self.knowledge_dir).mkdir(parents=True, exist_ok=True)
         Path("static").mkdir(parents=True, exist_ok=True)
