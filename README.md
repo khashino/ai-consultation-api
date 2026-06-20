@@ -1,205 +1,506 @@
-# AI Consultation API
+# AI Consultation RAG Platform
 
-A local AI Engineering project built with FastAPI, Ollama, ChromaDB, embeddings, and RAG.
+A local AI Engineering project that demonstrates how to build a practical Retrieval-Augmented Generation system using FastAPI, Ollama, ChromaDB, SentenceTransformers, SQLite, and an embeddable chatbot widget.
 
-This project demonstrates how to build a practical backend AI system that can:
+This project started as a simple AI consultation API and evolved into a mini AI product with:
 
-- Accept user questions through an API
-- Retrieve relevant context from a local knowledge base
-- Use a local LLM through Ollama
-- Return structured JSON responses
-- Apply backend safety guardrails
-- Upload, list, search, and delete documents
-- Support Persian and English knowledge documents
+* Local LLM generation with Ollama
+* RAG retrieval using ChromaDB
+* Multilingual embeddings
+* Document upload and ingestion
+* Admin dashboard
+* Embeddable chatbot widget
+* Session-based chat memory
+* Persistent chat history with SQLite
+* Backend guardrails for safer responses
+* Search, debug, and evaluation scripts
+* Clean modular backend structure
 
-## Why this project exists
+---
 
-The goal of this project is to learn practical AI Engineering.
+## Project Goal
 
-Instead of only sending prompts to an LLM, this project treats the LLM as one component inside a backend system.
+The goal of this project is to learn and demonstrate practical AI Engineering concepts by building a working local RAG application.
 
-The system includes:
+The system allows users to upload knowledge base documents, ask questions about them, and receive AI-generated answers based on retrieved context.
 
-- API design
-- Document ingestion
-- Text chunking
-- Embeddings
-- Vector search
-- RAG
-- Structured output validation
-- Guardrails
-- Retrieval debugging
-- Document management
+It is designed as a portfolio project for roles such as:
 
-## Architecture
+* AI Engineer
+* Backend AI Engineer
+* LLM Application Developer
+* RAG Developer
+* AI Automation Engineer
+* Enterprise AI Solutions Engineer
 
-User Question
-    ↓
-FastAPI Endpoint
-    ↓
-Embedding Model
-    ↓
-ChromaDB Vector Search
-    ↓
-Retrieved Context
-    ↓
-Prompt Builder
-    ↓
-Ollama Local LLM
-    ↓
-JSON Parsing
-    ↓
-Pydantic Validation
-    ↓
-Backend Guardrails
-    ↓
-Structured API Response
-
-## Tech Stack
-
-- Python
-- FastAPI
-- Ollama
-- llama3.2:1b
-- ChromaDB
-- Sentence Transformers
-- paraphrase-multilingual-MiniLM-L12-v2
-- Pydantic
-- Uvicorn
+---
 
 ## Main Features
 
-### Ask a question
+### 1. RAG Question Answering
 
+The API retrieves relevant document chunks from ChromaDB and sends them to a local Ollama model to generate an answer.
+
+Endpoint:
+
+```text
 POST /ask
+```
 
-Uses RAG to answer a user question based on local documents.
+The response includes:
 
-### Search knowledge base
+* Answer
+* Confidence
+* Human review flag
+* Suggested next steps
+* Sources
 
-POST /search
+---
 
-Searches ChromaDB and returns retrieved chunks without calling the LLM.
+### 2. Embeddable Chatbot Widget
 
-Useful for debugging retrieval quality.
+The project includes a JavaScript chatbot widget that can be embedded into any HTML page.
 
-### Debug response
+Example:
 
-POST /debug
+```html
+<script>
+  window.AI_CHATBOT_API_BASE = "http://127.0.0.1:8000";
+  window.AI_CHATBOT_TITLE = "RAG Assistant";
+  window.AI_CHATBOT_TOPIC = "AI Consultation RAG Knowledge Base";
+  window.AI_CHATBOT_USER_COUNTRY = "Iran";
+  window.AI_CHATBOT_TARGET_COUNTRY = null;
+</script>
 
-Shows:
+<script src="http://127.0.0.1:8000/static/chatbot-widget.js"></script>
+```
 
-- Retrieved context
-- Prompt
-- Raw model output
-- Parsed output
+The chatbot calls:
 
-### Upload document
+```text
+POST /chat
+```
 
+It shows only the final answer to the user.
+
+---
+
+### 3. Persistent Chat Memory
+
+Chat history is stored in SQLite.
+
+The chatbot keeps a session ID in browser localStorage, and the backend stores the conversation in:
+
+```text
+chat_history.db
+```
+
+This means chat history survives server restarts.
+
+---
+
+### 4. Admin Dashboard
+
+The admin dashboard is available at:
+
+```text
+http://127.0.0.1:8000/app
+```
+
+It includes:
+
+* System dashboard
+* Document upload
+* Document listing
+* Document deletion
+* RAG ask form
+* Knowledge base search
+* Debug view
+* Chat sessions list
+* Session history viewer
+* Session deletion
+* Recent messages view
+
+---
+
+### 5. Document Management
+
+Supported document type:
+
+```text
+.txt
+```
+
+Documents are uploaded through the admin panel or API.
+
+The system:
+
+1. Saves the file in `knowledge_base/`
+2. Splits it into chunks
+3. Creates embeddings
+4. Stores vectors in ChromaDB
+
+Endpoints:
+
+```text
 POST /documents/upload
-
-Uploads a .txt document, chunks it, embeds it, and stores it in ChromaDB.
-
-### List documents
-
 GET /documents
-
-Lists documents currently stored in the vector database.
-
-### Delete document
-
 DELETE /documents/{source}
+```
 
-Deletes all chunks for a document and removes the local file.
+---
 
-## Example request
+### 6. Vector Search
 
-{
-  "question": "What should I check for a Germany work visa?",
-  "topic": "immigration",
-  "user_country": "Iran",
-  "target_country": "Germany"
-}
+The system can search the ChromaDB knowledge base without calling the LLM.
 
-## Example response
+Endpoint:
 
-{
-  "answer": "A person who wants to work in Germany usually needs to check the correct visa or residence permit category. Important factors may include a valid job offer, relevant education or professional qualification, and salary requirements depending on the visa type.",
-  "confidence": "medium",
-  "needs_human_review": true,
-  "suggested_next_steps": [
-    "check official German immigration rules",
-    "review qualifications with a qualified expert",
-    "consider job offers from reputable employers"
-  ],
-  "sources": [
-    "germany_work_visa.txt"
-  ]
-}
+```text
+POST /search
+```
 
-## Important AI Engineering Lessons
+This is useful for debugging RAG retrieval quality.
 
-### 1. Valid JSON does not mean valid AI behavior
+---
 
-The model can return valid JSON but still produce unsafe or overconfident answers.
+### 7. Backend Guardrails
 
-That is why this project uses backend guardrails after the LLM response.
+The project includes backend-level safety rules for sensitive topics such as:
 
-### 2. Prompts are not enough
+* Immigration
+* Legal
+* Medical
+* Financial
 
-Prompts guide the model, but backend rules protect the product.
+Guardrails can:
 
-Sensitive topics such as immigration, legal, medical, and financial questions require deterministic safety checks.
+* Force human review
+* Reduce overconfident answers
+* Clean placeholder model output
+* Prevent unsafe confidence
 
-### 3. Retrieval quality matters
+This shows an important AI Engineering concept:
 
-In RAG systems, bad retrieval leads to bad answers.
+```text
+Prompts guide the model.
+Backend rules protect the product.
+```
 
-This project includes /search and /debug endpoints to inspect retrieval quality before blaming the LLM.
+---
 
-### 4. The LLM is not the application
+## Current Architecture
 
-The real application is the system around the LLM:
+```text
+User / Admin / Embedded Website
+        ↓
+FastAPI Backend
+        ↓
+Routers
+        ↓
+Services
+        ↓
+Repositories / Vector DB / LLM
+        ↓
+Ollama + ChromaDB + SQLite
+```
 
-- validation
-- retrieval
-- guardrails
-- logging
-- fallbacks
-- document management
-- API design
+---
 
-## Running the project
+## RAG Flow
 
-Create virtual environment:
+```text
+User question
+↓
+Embedding model creates query embedding
+↓
+ChromaDB retrieves relevant chunks
+↓
+Prompt is built with retrieved context
+↓
+Ollama generates JSON response
+↓
+Pydantic validates response
+↓
+Guardrails clean and adjust response
+↓
+API returns final answer
+```
 
-python3 -m venv venv
-source venv/bin/activate
+---
 
-Install dependencies:
+## Chat Flow
 
-pip install -r requirements.txt
+```text
+User sends message from chatbot
+↓
+Browser sends session_id + message to /chat
+↓
+Backend retrieves recent chat history from SQLite
+↓
+Backend retrieves relevant knowledge from ChromaDB
+↓
+Prompt combines chat history + retrieved context + latest message
+↓
+Ollama generates answer
+↓
+Backend saves user message and assistant answer to SQLite
+↓
+Widget displays only the answer
+```
 
-Start Ollama:
+---
 
-sudo systemctl start ollama
+## Project Structure
 
-Pull model:
+```text
+ai-consultation-api/
+├── app/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── dependencies.py
+│   ├── core/
+│   │   ├── __init__.py
+│   │   └── config.py
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── schemas.py
+│   ├── repositories/
+│   │   ├── __init__.py
+│   │   └── chat_repository.py
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   ├── chat.py
+│   │   ├── documents.py
+│   │   ├── health.py
+│   │   ├── pages.py
+│   │   └── rag.py
+│   └── services/
+│       ├── __init__.py
+│       ├── chat_service.py
+│       ├── document_service.py
+│       ├── embedding_service.py
+│       ├── guardrail_service.py
+│       ├── ollama_service.py
+│       ├── rag_service.py
+│       └── vector_store_service.py
+├── scripts/
+│   ├── __init__.py
+│   ├── evaluate_api.py
+│   ├── evaluate_retrieval.py
+│   ├── ingest_documents.py
+│   ├── test_api.py
+│   └── test_retrieval.py
+├── static/
+│   ├── index.html
+│   ├── embed-demo.html
+│   └── chatbot-widget.js
+├── knowledge_base/
+├── chroma_db/
+├── main.py
+├── README.md
+├── LOCAL_SETUP.md
+├── PROJECT_CONTEXT_FOR_NEXT_CHAT.md
+├── requirements.txt
+├── .env
+├── .env.example
+└── .gitignore
+```
 
-ollama pull llama3.2:1b
+---
 
-Run API:
+## Folder Explanation
 
-uvicorn main:app --reload
+### `app/`
 
-Open API docs:
+Main backend application package.
 
-http://127.0.0.1:8000/docs
+### `app/main.py`
 
-## Environment variables
+Creates the FastAPI app, configures CORS, mounts static files, registers routers, and initializes the SQLite chat database.
 
-Create .env:
+### `app/dependencies.py`
 
+Creates shared service instances used by routers.
+
+### `app/core/config.py`
+
+Loads environment variables and stores project settings.
+
+### `app/models/schemas.py`
+
+Contains Pydantic request and response models.
+
+### `app/routers/`
+
+Contains API route definitions.
+
+Routers:
+
+* `health.py` — system health endpoint
+* `pages.py` — admin and chatbot demo pages
+* `documents.py` — upload, list, delete documents
+* `rag.py` — ask, search, debug
+* `chat.py` — chatbot and session endpoints
+
+### `app/services/`
+
+Contains business logic.
+
+Services:
+
+* `embedding_service.py` — loads embedding model and creates embeddings
+* `vector_store_service.py` — ChromaDB operations
+* `document_service.py` — document upload, chunking, ingestion
+* `ollama_service.py` — local LLM calls
+* `rag_service.py` — RAG prompt and `/ask` logic
+* `chat_service.py` — chatbot prompt, memory, `/chat` logic
+* `guardrail_service.py` — response cleanup and safety rules
+
+### `app/repositories/`
+
+Contains database access logic.
+
+Currently:
+
+* `chat_repository.py` — SQLite chat persistence
+
+### `static/`
+
+Frontend files.
+
+* `index.html` — admin dashboard
+* `embed-demo.html` — sample page using chatbot widget
+* `chatbot-widget.js` — embeddable chatbot script
+
+### `scripts/`
+
+Utility scripts for testing and evaluation.
+
+* `test_api.py`
+* `test_retrieval.py`
+* `evaluate_api.py`
+* `evaluate_retrieval.py`
+* `ingest_documents.py`
+
+### `knowledge_base/`
+
+Local uploaded text files.
+
+Usually ignored by Git.
+
+### `chroma_db/`
+
+Local ChromaDB vector database.
+
+Usually ignored by Git.
+
+### `chat_history.db`
+
+SQLite chat history database.
+
+Usually ignored by Git.
+
+---
+
+## API Endpoints
+
+### Health
+
+```text
+GET /
+```
+
+Returns system configuration and health status.
+
+---
+
+### Admin Pages
+
+```text
+GET /app
+GET /chat-demo
+```
+
+---
+
+### Documents
+
+```text
+POST /documents/upload
+GET /documents
+DELETE /documents/{source}
+```
+
+---
+
+### RAG
+
+```text
+POST /ask
+POST /search
+POST /debug
+```
+
+---
+
+### Chat
+
+```text
+POST /chat
+GET /chat/sessions
+GET /chat/sessions/{session_id}
+DELETE /chat/sessions/{session_id}
+GET /chat/messages/recent
+```
+
+---
+
+## Main Technologies
+
+### FastAPI
+
+Used for the backend API.
+
+### Ollama
+
+Runs the local LLM.
+
+Current model:
+
+```text
+llama3.2:1b
+```
+
+### ChromaDB
+
+Stores vector embeddings and retrieves relevant document chunks.
+
+### SentenceTransformers
+
+Creates embeddings for documents and questions.
+
+Current embedding model:
+
+```text
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+```
+
+### SQLite
+
+Stores persistent chat history.
+
+### JavaScript
+
+Used for the embeddable chatbot widget and admin dashboard.
+
+---
+
+## Environment Variables
+
+Example `.env`:
+
+```env
 OLLAMA_URL=http://localhost:11434/api/generate
 OLLAMA_MODEL=llama3.2:1b
 
@@ -212,8 +513,84 @@ EMBEDDING_MODEL_NAME=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 TOP_K=3
 MAX_DISTANCE=20
 
-## Status
+CHAT_DB_PATH=chat_history.db
+MAX_CHAT_MESSAGES=8
+```
 
-Version: 1.0
+---
 
-This is a learning project for practical AI Engineering, focused on local LLMs, RAG, embeddings, vector databases, backend guardrails, and enterprise-style API design.
+## Git Ignore Strategy
+
+The following should not be committed:
+
+```text
+.env
+venv/
+__pycache__/
+chat_history.db
+chroma_db/
+knowledge_base/
+```
+
+These are local runtime files, databases, uploaded documents, or environment-specific files.
+
+---
+
+## Current Limitations
+
+This is still a learning project.
+
+Current limitations:
+
+* Only `.txt` file upload is supported
+* No authentication for admin dashboard yet
+* No user accounts
+* No production deployment setup yet
+* No Docker setup yet
+* CORS allows all origins in learning mode
+* Chat memory is stored locally in SQLite
+* No streaming response yet
+* No hybrid search yet
+* No PDF ingestion yet
+
+---
+
+## Planned Improvements
+
+Good next steps:
+
+1. Add admin authentication
+2. Add Docker and Docker Compose
+3. Add PDF upload support
+4. Add hybrid search
+5. Add conversation summary memory
+6. Add streaming chatbot responses
+7. Add better Persian text normalization
+8. Add production CORS configuration
+9. Add rate limiting
+10. Add PostgreSQL option
+11. Add deployment guide
+12. Add frontend theme customization for chatbot widget
+
+---
+
+## Portfolio Summary
+
+This project demonstrates practical AI Engineering skills:
+
+* Building an LLM-powered backend
+* Implementing RAG with vector search
+* Using local models with Ollama
+* Creating embeddings with SentenceTransformers
+* Persisting chat history with SQLite
+* Designing backend guardrails
+* Structuring a maintainable FastAPI project
+* Building an embeddable chatbot widget
+* Creating an admin dashboard
+* Writing evaluation scripts for RAG quality
+
+---
+
+## Example Project Description
+
+A local RAG-based AI consultation platform built with FastAPI, Ollama, ChromaDB, SentenceTransformers, and SQLite. The system supports document upload, vector search, AI question answering, backend guardrails, persistent chat memory, an admin dashboard, and an embeddable chatbot widget that can be added to any website.
