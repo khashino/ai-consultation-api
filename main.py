@@ -1,18 +1,35 @@
 import json
 import logging
 import os
+from pathlib import Path
 from typing import List, Literal, Optional
 
+import chromadb
 import requests
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field, ValidationError
+from sentence_transformers import SentenceTransformer
 
 
 load_dotenv()
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
+
+CHROMA_DIR = os.getenv("CHROMA_DIR", "chroma_db")
+COLLECTION_NAME = os.getenv("COLLECTION_NAME", "consultation_knowledge")
+KNOWLEDGE_DIR = os.getenv("KNOWLEDGE_DIR", "knowledge_base")
+
+EMBEDDING_MODEL_NAME = os.getenv(
+    "EMBEDDING_MODEL_NAME",
+    "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+)
+
+TOP_K = int(os.getenv("TOP_K", "3"))
+MAX_DISTANCE = float(os.getenv("MAX_DISTANCE", "20"))
+
+Path(KNOWLEDGE_DIR).mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,9 +38,18 @@ logging.basicConfig(
 
 app = FastAPI(
     title="AI Consultation API",
-    description="A local AI consultation API using FastAPI, Ollama, and structured output validation.",
-    version="0.3.0"
+    description=(
+        "A local RAG-based AI consultation API using FastAPI, Ollama, "
+        "ChromaDB, embeddings, document upload, and backend guardrails."
+    ),
+    version="0.8.0"
 )
+
+logging.info("Loading embedding model: %s", EMBEDDING_MODEL_NAME)
+embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+
+chroma_client = chromadb.PersistentClient(path=CHROMA_DIR)
+knowledge_collection = chroma_client.get_or_create_collection(name=COLLECTION_NAME)
 
 
 class ConsultationRequest(BaseModel):
@@ -38,44 +64,153 @@ class ConsultationResponse(BaseModel):
     confidence: Literal["low", "medium", "high"]
     needs_human_review: bool
     suggested_next_steps: List[str]
+    sources: List[str] = []
 
 
-class DebugResponse(BaseModel):
-    model: str
-    prompt: str
-    raw_output: str
-    parsed_output: Optional[dict]
+class RetrievedContext(BaseModel):
+    source: str
+    chunk_index: int
+    distance: float
+    content: str
 
 
-def build_prompt(request: ConsultationRequest) -> str:
+class UploadResponse(BaseModel):
+    message: str
+    filename: str
+    chunks: int
+    status: str
+
+
+def chunk_text(text: str, chunk_size: int = 700, overlap: int = 100) -> List[str]:
+    """
+    Splits long text into overlapping chunks for embedding.
+    """
+
+    chunks = []
+    start = 0
+
+    while start < len(text):
+        end = start + chunk_size
+        chunk = text[start:end].strip()
+
+        if chunk:
+            chunks.append(chunk)
+
+        start += chunk_size - overlap
+
+    return chunks
+
+
+def ingest_text_document(filename: str, text: str) -> dict:
+    """
+    Chunks a text document, embeds each chunk, and stores it in ChromaDB.
+    """
+
+    chunks = chunk_text(text)
+
+    if not chunks:
+        raise ValueError("Document is empty or could not be chunked.")
+
+    ids = []
+    documents = []
+    metadatas = []
+    embeddings = []
+
+    for index, chunk in enumerate(chunks):
+        chunk_id = f"{filename}_chunk_{index}"
+
+        ids.append(chunk_id)
+        documents.append(chunk)
+        metadatas.append(
+            {
+                "source": filename,
+                "chunk_index": index
+            }
+        )
+
+        embedding = embedding_model.encode(chunk).tolist()
+        embeddings.append(embedding)
+
+    knowledge_collection.upsert(
+        ids=ids,
+        documents=documents,
+        metadatas=metadatas,
+        embeddings=embeddings
+    )
+
+    return {
+        "filename": filename,
+        "chunks": len(chunks),
+        "status": "ingested"
+    }
+
+
+def retrieve_context(question: str) -> List[RetrievedContext]:
+    """
+    Converts the user question into an embedding, searches ChromaDB,
+    and returns the most relevant chunks.
+    """
+
+    query_embedding = embedding_model.encode(question).tolist()
+
+    results = knowledge_collection.query(
+        query_embeddings=[query_embedding],
+        n_results=TOP_K
+    )
+
+    retrieved_contexts = []
+
+    documents = results.get("documents", [[]])[0]
+    metadatas = results.get("metadatas", [[]])[0]
+    distances = results.get("distances", [[]])[0]
+
+    for document, metadata, distance in zip(documents, metadatas, distances):
+        if distance <= MAX_DISTANCE:
+            retrieved_contexts.append(
+                RetrievedContext(
+                    source=metadata.get("source", "unknown"),
+                    chunk_index=metadata.get("chunk_index", -1),
+                    distance=float(distance),
+                    content=document
+                )
+            )
+
+    return retrieved_contexts
+
+
+def build_prompt(
+    request: ConsultationRequest,
+    retrieved_contexts: List[RetrievedContext]
+) -> str:
+    if retrieved_contexts:
+        context_text = "\n\n".join(
+            [
+                f"Source: {item.source}, chunk: {item.chunk_index}\n{item.content}"
+                for item in retrieved_contexts
+            ]
+        )
+    else:
+        context_text = "No relevant context was found in the local knowledge base."
+
     return f"""
 You are an AI consultation assistant inside a backend API.
 
 Your task:
-Return a structured JSON response for the user's question.
+Answer the user's question using the provided retrieved context.
 
-Important safety rules:
+Important rules:
+- Use the retrieved context as the main source of truth.
+- If the retrieved context is not enough, say that the local knowledge base does not contain enough information.
+- Do not invent official rules, laws, dates, prices, or guarantees.
 - Do not make final legal, immigration, medical, financial, or contract decisions.
 - If the question involves immigration, law, money, health, contracts, or important personal decisions, set needs_human_review to true.
-- If information is missing, say that more details are needed.
 - Keep the answer practical and short.
-- Do not invent official rules, laws, dates, prices, or guarantees.
 - Do not use markdown.
 - Do not add any text before or after the JSON.
 - Return only valid JSON.
 
-The JSON must have exactly these fields:
-{{
-  "answer": "string",
-  "confidence": "low | medium | high",
-  "needs_human_review": true,
-  "suggested_next_steps": ["string", "string", "string"]
-}}
-
-Field rules:
-- confidence must be exactly one of: low, medium, high
-- needs_human_review must be true or false
-- suggested_next_steps must contain 3 to 5 short practical steps
+Retrieved context:
+{context_text}
 
 User context:
 - Topic: {request.topic}
@@ -84,6 +219,21 @@ User context:
 
 User question:
 {request.question}
+
+Return JSON exactly in this shape:
+{{
+  "answer": "short practical answer based on the retrieved context",
+  "confidence": "low | medium | high",
+  "needs_human_review": true,
+  "suggested_next_steps": ["step 1", "step 2", "step 3"],
+  "sources": ["source_file_name.txt"]
+}}
+
+Field rules:
+- confidence must be exactly one of: low, medium, high
+- needs_human_review must be true or false
+- suggested_next_steps must contain 3 to 5 short practical steps
+- sources must contain only file names from the retrieved context
 """.strip()
 
 
@@ -92,6 +242,7 @@ def extract_json_from_text(text: str) -> dict:
     Tries to parse JSON directly first.
     If the model adds extra text, tries to extract the first JSON object.
     """
+
     try:
         return json.loads(text)
     except json.JSONDecodeError:
@@ -111,6 +262,7 @@ def fallback_response(reason: str) -> ConsultationResponse:
     """
     Safe fallback when the local model returns bad JSON or invalid schema.
     """
+
     logging.warning("Using fallback response. Reason: %s", reason)
 
     return ConsultationResponse(
@@ -124,7 +276,8 @@ def fallback_response(reason: str) -> ConsultationResponse:
             "Clarify the exact question",
             "Provide missing background details",
             "Ask a qualified human expert to review the case"
-        ]
+        ],
+        sources=[]
     )
 
 
@@ -157,7 +310,33 @@ def call_ollama(prompt: str) -> tuple[str, dict]:
         parsed_output = extract_json_from_text(raw_output)
         return raw_output, parsed_output
     except Exception as error:
-        raise ValueError(f"Invalid JSON from model: {str(error)} | Raw output: {raw_output}")
+        raise ValueError(
+            f"Invalid JSON from model: {str(error)} | Raw output: {raw_output}"
+        )
+
+
+def clean_sources(
+    model_sources: List[str],
+    retrieved_contexts: List[RetrievedContext]
+) -> List[str]:
+    """
+    Keeps only real source file names.
+    If the model returns invalid source values like 'chunk:1',
+    replace them with sources from retrieved context.
+    """
+
+    valid_sources = {item.source for item in retrieved_contexts}
+
+    cleaned = [
+        source for source in model_sources
+        if source in valid_sources
+    ]
+
+    if cleaned:
+        return sorted(set(cleaned))
+
+    return sorted(valid_sources)
+
 
 def apply_safety_guardrails(
     request: ConsultationRequest,
@@ -265,23 +444,95 @@ def apply_safety_guardrails(
 
     return response
 
+
 @app.get("/")
 def health_check():
     return {
         "status": "ok",
-        "message": "AI Consultation API with Ollama is running",
+        "message": "AI Consultation API with RAG is running",
         "model": OLLAMA_MODEL,
-        "version": "0.3.0"
+        "embedding_model": EMBEDDING_MODEL_NAME,
+        "vector_db": "ChromaDB",
+        "collection": COLLECTION_NAME,
+        "knowledge_dir": KNOWLEDGE_DIR,
+        "top_k": TOP_K,
+        "max_distance": MAX_DISTANCE,
+        "version": "0.8.0"
     }
+
+
+@app.post("/documents/upload", response_model=UploadResponse)
+async def upload_document(file: UploadFile = File(...)):
+    """
+    Uploads a .txt document, saves it locally, chunks it,
+    embeds it, and stores it in ChromaDB.
+    """
+
+    if not file.filename:
+        raise HTTPException(
+            status_code=400,
+            detail="Filename is required."
+        )
+
+    if not file.filename.endswith(".txt"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only .txt files are supported in this version."
+        )
+
+    safe_filename = Path(file.filename).name
+    file_path = Path(KNOWLEDGE_DIR) / safe_filename
+
+    content_bytes = await file.read()
+
+    try:
+        text = content_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(
+            status_code=400,
+            detail="File must be UTF-8 encoded text."
+        )
+
+    file_path.write_text(text, encoding="utf-8")
+
+    try:
+        result = ingest_text_document(safe_filename, text)
+        return UploadResponse(
+            message="Document uploaded and ingested successfully.",
+            filename=result["filename"],
+            chunks=result["chunks"],
+            status=result["status"]
+        )
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to ingest document: {str(error)}"
+        )
+
+
+@app.post("/search", response_model=List[RetrievedContext])
+def search_knowledge_base(request: ConsultationRequest):
+    """
+    Searches the vector database without calling the LLM.
+    Useful for debugging retrieval quality.
+    """
+
+    return retrieve_context(request.question)
 
 
 @app.post("/ask", response_model=ConsultationResponse)
 def ask_consultation(request: ConsultationRequest):
-    prompt = build_prompt(request)
+    retrieved_contexts = retrieve_context(request.question)
+    prompt = build_prompt(request, retrieved_contexts)
 
     try:
         raw_output, ai_output = call_ollama(prompt)
         validated_response = ConsultationResponse(**ai_output)
+
+        validated_response.sources = clean_sources(
+            model_sources=validated_response.sources,
+            retrieved_contexts=retrieved_contexts
+        )
 
         safe_response = apply_safety_guardrails(
             request=request,
@@ -296,28 +547,131 @@ def ask_consultation(request: ConsultationRequest):
     except ValueError as error:
         return fallback_response(str(error))
 
+@app.get("/documents")
+def list_documents():
+    """
+    Lists documents currently stored in the ChromaDB collection.
+    """
 
-@app.post("/debug", response_model=DebugResponse)
+    try:
+        data = knowledge_collection.get(
+            include=["metadatas"]
+        )
+
+        metadatas = data.get("metadatas", [])
+
+        document_map = {}
+
+        for metadata in metadatas:
+            source = metadata.get("source", "unknown")
+
+            if source not in document_map:
+                document_map[source] = 0
+
+            document_map[source] += 1
+
+        documents = [
+            {
+                "source": source,
+                "chunks": chunks
+            }
+            for source, chunks in sorted(document_map.items())
+        ]
+
+        return {
+            "collection": COLLECTION_NAME,
+            "total_documents": len(documents),
+            "documents": documents
+        }
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to list documents: {str(error)}"
+        )
+    
+
+@app.delete("/documents/{source}")
+def delete_document(source: str):
+    """
+    Deletes all chunks for a document from the ChromaDB collection
+    and removes the local .txt file if it exists.
+    """
+
+    try:
+        data = knowledge_collection.get(
+            where={"source": source},
+            include=["metadatas"]
+        )
+
+        ids = data.get("ids", [])
+
+        if not ids:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No document found with source: {source}"
+            )
+
+        knowledge_collection.delete(ids=ids)
+
+        file_path = Path(KNOWLEDGE_DIR) / source
+
+        file_deleted = False
+        if file_path.exists():
+            file_path.unlink()
+            file_deleted = True
+
+        return {
+            "message": "Document deleted successfully.",
+            "source": source,
+            "deleted_chunks": len(ids),
+            "file_deleted": file_deleted
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete document: {str(error)}"
+        )
+    
+
+    
+@app.post("/debug")
 def debug_consultation(request: ConsultationRequest):
     """
     Debug endpoint for learning.
-    Shows prompt, raw model output, and parsed JSON.
+    Shows retrieved context, prompt, raw model output, and parsed JSON.
     Do not expose this endpoint in production.
     """
-    prompt = build_prompt(request)
+
+    retrieved_contexts = retrieve_context(request.question)
+    prompt = build_prompt(request, retrieved_contexts)
 
     try:
         raw_output, parsed_output = call_ollama(prompt)
-        return DebugResponse(
-            model=OLLAMA_MODEL,
-            prompt=prompt,
-            raw_output=raw_output,
-            parsed_output=parsed_output
-        )
+
+        return {
+            "model": OLLAMA_MODEL,
+            "embedding_model": EMBEDDING_MODEL_NAME,
+            "retrieved_contexts": [
+                item.model_dump() for item in retrieved_contexts
+            ],
+            "prompt": prompt,
+            "raw_output": raw_output,
+            "parsed_output": parsed_output
+        }
+
     except Exception as error:
-        return DebugResponse(
-            model=OLLAMA_MODEL,
-            prompt=prompt,
-            raw_output=str(error),
-            parsed_output=None
-        )
+        return {
+            "model": OLLAMA_MODEL,
+            "embedding_model": EMBEDDING_MODEL_NAME,
+            "retrieved_contexts": [
+                item.model_dump() for item in retrieved_contexts
+            ],
+            "prompt": prompt,
+            "raw_output": str(error),
+            "parsed_output": None
+        }
